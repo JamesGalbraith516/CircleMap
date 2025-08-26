@@ -1,227 +1,257 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>User Map</title>
+  <title>Live Map with Top Filters</title>
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <!-- MarkerCluster CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
-  <!-- Custom CSS -->
+  <!-- Leaflet CSS + JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Leaflet MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- PapaParse for CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
+    html, body { height: 100%; margin: 0; font-family: sans-serif; }
+    #topPanel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: #0094CD;
       display: flex;
-      height: 100vh;
-      overflow: hidden;
-    }
-    #sidebar {
-      width: 350px;
-      overflow-y: auto;
-      border-right: 1px solid #ddd;
-      padding: 10px;
+      align-items: center;
+      padding: 0 1rem;
+      gap: 1rem;
+      z-index: 1000;
       box-sizing: border-box;
     }
-    #map {
-      flex: 1;
-    }
-    .filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-      margin-bottom: 10px;
-    }
-    .filters input, .filters select {
-      flex: 1;
-      padding: 5px;
+    #topPanel input, #topPanel select {
+      height: 36px;
       font-size: 14px;
+      padding: 0 0.5rem;
+      border-radius: 4px;
+      border: none;
     }
-    .user-card {
-      display: flex;
-      align-items: center;
-      background: #fff;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 8px;
-      margin-bottom: 8px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    #mapWrapper {
+      position: absolute;
+      top: 60px;
+      left: 0;
+      right: 300px; /* leave space for sidebar */
+      bottom: 0;
     }
-    .avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
+    #map { height: 100%; width: 100%; }
+    #resultsPanel {
+      position: fixed;
+      top: 60px;
+      right: 0;
+      width: 300px;
+      bottom: 0;
+      overflow-y: auto;
+      background: rgba(0, 148, 205, 0.9);
       color: white;
-      margin-right: 10px;
-      flex-shrink: 0;
+      padding: 1rem;
+      font-size: 0.9rem;
+      z-index: 1000;
     }
-    .user-info {
-      flex: 1;
+    .nearby-entry {
+      padding: 0.3rem 0.3rem 0.8rem 0.3rem;
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      transition: all 0.2s ease;
+      cursor: pointer;
     }
-    .user-info h4 {
-      margin: 0;
+    .nearby-entry:hover { background-color: rgba(255,255,255,0.2); }
+    .name-distance { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem; }
+    .distance { font-weight: normal; font-size: 0.75rem; opacity: 0.8; }
+    .company-name { font-size: 0.8rem; margin-top: 0.2rem; opacity: 0.9; }
+
+    /* Cluster styling */
+    .custom-cluster {
+      background-color: #013b5c;
+      color: white;
+      border: 3px solid white;
+      border-radius: 50%;
+      text-align: center;
+      font-weight: bold;
+      line-height: 40px;
       font-size: 16px;
     }
-    .user-info p {
-      margin: 2px 0;
-      font-size: 13px;
-      color: #555;
+
+    /* Individual letter markers */
+    .letter-marker {
+      background: #013b5c;
+      border: 3px solid white;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      font-weight: bold;
+      line-height: 30px;
+      font-size: 14px;
+      width: 30px;
+      height: 30px;
     }
+    .letter-marker:hover { filter: drop-shadow(0 0 12px #00f); }
   </style>
 </head>
 <body>
-  <div id="sidebar">
-    <div class="filters">
-      <input type="text" id="searchName" placeholder="Search by name...">
-      <input type="text" id="searchLocation" placeholder="Search by location...">
-      <select id="filterIndustry"><option value="">All Industries</option></select>
-      <select id="filterCountry"><option value="">All Countries</option></select>
-    </div>
-    <div id="userList"></div>
-  </div>
+
+<div id="topPanel">
+  <input type="text" id="searchInput" placeholder="Search Name" />
+  <input type="text" id="locationInput" placeholder="Search Location" />
+  <select id="typeFilter"><option value="">All Types</option></select>
+  <input type="number" id="distanceFilter" min="1" max="1000" step="1" value="50" />
+</div>
+
+<div id="mapWrapper">
   <div id="map"></div>
+</div>
 
-  <!-- Libraries -->
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<div id="resultsPanel">
+  <h3>Visible Users</h3>
+  <div id="nearbyList">Click a marker to see users.</div>
+</div>
 
-  <script>
-    // 👉 Replace with your published CSV link
-    const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSm2djr9eOyF8SI92KcfrCsrFEcW3dmaStUT4H0Ard8A1BUKKgd08owmHvG6TT7AdfPXB26pJ-Stzjw/pub?gid=1454020769&single=true&output=csv";
+<script>
+const map = L.map('map', { zoomControl: true }).setView([50.5, -95.0], 4);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
 
-    const map = L.map('map').setView([20, 0], 2);
+const sheetURL = 'https://docs.google.com/spreadsheets/d/17h6qtv7Kw3ejYyK0hv7XyTUQ1y7KP3wj_w-pG4yNfkM/export?format=csv&gid=1454020769';
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-
-    const markers = L.markerClusterGroup();
-    map.addLayer(markers);
-
-    let users = [];
-
-    function getAvatarLetter(name) {
-      return name ? name[0].toUpperCase() : "?";
-    }
-
-    function getRandomColor(str) {
-      const colors = ["#e63946", "#457b9d", "#2a9d8f", "#f4a261", "#8d99ae"];
-      let code = str.charCodeAt(0) % colors.length;
-      return colors[code];
-    }
-
-    function renderUsers(list) {
-      const container = document.getElementById("userList");
-      container.innerHTML = "";
-      list.forEach(user => {
-        const card = document.createElement("div");
-        card.className = "user-card";
-
-        const avatar = document.createElement("div");
-        avatar.className = "avatar";
-        avatar.style.background = getRandomColor(user["First Name"]);
-        avatar.innerText = getAvatarLetter(user["First Name"]);
-
-        const info = document.createElement("div");
-        info.className = "user-info";
-        info.innerHTML = `
-          <h4>${user["First Name"]} ${user["Last Name"]}</h4>
-          <p>${user.City}, ${user["Country"]}</p>
-          <p><em>${user.Industry || ""}</em></p>
-        `;
-
-        card.appendChild(avatar);
-        card.appendChild(info);
-        container.appendChild(card);
-      });
-    }
-
-    function filterUsers() {
-      const searchName = document.getElementById("searchName").value.toLowerCase();
-      const searchLocation = document.getElementById("searchLocation").value.toLowerCase();
-      const filterIndustry = document.getElementById("filterIndustry").value;
-      const filterCountry = document.getElementById("filterCountry").value;
-
-      return users.filter(u => {
-        const matchesName = (u["First Name"] + " " + u["Last Name"]).toLowerCase().includes(searchName);
-        const matchesLocation = (u.City + " " + u["State/Province"]).toLowerCase().includes(searchLocation);
-        const matchesIndustry = !filterIndustry || u.Industry === filterIndustry;
-        const matchesCountry = !filterCountry || u.Country === filterCountry;
-        return matchesName && matchesLocation && matchesIndustry && matchesCountry;
-      });
-    }
-
-    function updateMapAndList() {
-      markers.clearLayers();
-      const filtered = filterUsers();
-      renderUsers(filtered);
-
-      console.log("Filtered users:", filtered); // debug log
-
-      filtered.forEach(user => {
-        if (user.Geocode) {
-          const [lat, lng] = user.Geocode.split(",").map(Number);
-          console.log("Parsing geocode:", user.Geocode, "=>", lat, lng); // debug log
-          if (!isNaN(lat) && !isNaN(lng)) {
-            const marker = L.marker([lat, lng]).bindPopup(`
-              <strong>${user["First Name"]} ${user["Last Name"]}</strong><br>
-              ${user.City}, ${user.Country}<br>
-              ${user.Industry || ""}
-            `);
-            markers.addLayer(marker);
-          }
-        }
-      });
-
-      if (markers.getLayers().length > 0) {
-        map.fitBounds(markers.getBounds(), { padding: [50, 50] });
-      } else {
-        console.warn("⚠️ No markers to display");
-      }
-    }
-
-    // Fetch & parse Google Sheet CSV
-    Papa.parse(sheetUrl, {
-      download: true,
-      header: true,
-      complete: function(results) {
-        console.log("CSV results:", results); // debug log
-        users = results.data.filter(r => r.Geocode); 
-
-        // Populate filter dropdowns
-        const industries = [...new Set(users.map(u => u.Industry).filter(Boolean))];
-        const industrySelect = document.getElementById("filterIndustry");
-        industries.forEach(ind => {
-          const opt = document.createElement("option");
-          opt.value = ind;
-          opt.textContent = ind;
-          industrySelect.appendChild(opt);
-        });
-
-        const countries = [...new Set(users.map(u => u.Country).filter(Boolean))];
-        const countrySelect = document.getElementById("filterCountry");
-        countries.forEach(c => {
-          const opt = document.createElement("option");
-          opt.value = c;
-          opt.textContent = c;
-          countrySelect.appendChild(opt);
-        });
-
-        updateMapAndList();
-      }
+let allData = [], markers = [], selectedMarker = null;
+const markerCluster = L.markerClusterGroup({
+  iconCreateFunction: function(cluster){
+    return L.divIcon({
+      html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`,
+      className:'custom-cluster',
+      iconSize:L.point(40,40)
     });
+  }
+});
+map.addLayer(markerCluster);
 
-    // Filters live update
-    document.querySelectorAll("#searchName, #searchLocation, #filterIndustry, #filterCountry")
-      .forEach(el => el.addEventListener("input", updateMapAndList));
-  </script>
-</body>
-</html>
+fetch(sheetURL).then(r=>r.text()).then(csv=>{
+  const parsed = Papa.parse(csv,{header:true, skipEmptyLines:true});
+  allData = parsed.data;
+
+  // Populate type filter
+  const typeSet = new Set();
+  allData.forEach(row=>{ if(row['Type']) typeSet.add(row['Type']); });
+  const typeSelect = document.getElementById('typeFilter');
+  Array.from(typeSet).sort().forEach(type=>{
+    const opt = document.createElement('option');
+    opt.value=type; opt.textContent=type;
+    typeSelect.appendChild(opt);
+  });
+
+  updateMap();
+  document.getElementById('typeFilter').addEventListener('change',updateMap);
+  document.getElementById('distanceFilter').addEventListener('input',updateMap);
+  document.getElementById('searchInput').addEventListener('input',updateMap);
+  document.getElementById('locationInput').addEventListener('input',updateMap);
+  map.on('moveend', updateVisibleUsers);
+});
+
+function createLetterMarker(user){
+  const firstLetter = user['First Name'] ? user['First Name'][0].toUpperCase() : '?';
+  return L.divIcon({ html:`<div class="letter-marker">${firstLetter}</div>`, className:'', iconSize:[30,30], iconAnchor:[15,15] });
+}
+
+function updateMap(){
+  markerCluster.clearLayers(); markers = []; selectedMarker=null;
+  const typeFilter = document.getElementById('typeFilter').value.toLowerCase();
+  const nameFilter = document.getElementById('searchInput').value.toLowerCase();
+  const locationFilter = document.getElementById('locationInput').value.toLowerCase();
+
+  allData.forEach(row=>{
+    if(typeFilter && row['Type']?.toLowerCase()!==typeFilter) return;
+    if(nameFilter && !(`${row['First Name']} ${row['Last Name']}`.toLowerCase().includes(nameFilter))) return;
+    if(locationFilter && row['City'] && !row['City'].toLowerCase().includes(locationFilter)) return;
+    if(!row['Geocode'] || !row['Geocode'].includes(',')) return;
+    const [lat,lng]=row['Geocode'].split(',').map(Number);
+    if(isNaN(lat)||isNaN(lng)) return;
+
+    const marker = L.marker([lat,lng],{icon:createLetterMarker(row)});
+    marker.data=row;
+    marker.on('click',()=>handleMarkerClick(marker));
+    marker.on('mouseover',()=>highlightCard(marker,true));
+    marker.on('mouseout',()=>highlightCard(marker,false));
+
+    markers.push(marker);
+    markerCluster.addLayer(marker);
+  });
+  updateVisibleUsers();
+}
+
+function handleMarkerClick(marker){
+  selectedMarker=marker;
+  const radiusKm=parseFloat(document.getElementById('distanceFilter').value)||50;
+  const nearby=markers.filter(m=>m!==marker && haversineDistance(marker.getLatLng(),m.getLatLng())<=radiusKm);
+  const listDiv=document.getElementById('nearbyList'); listDiv.innerHTML='';
+
+  const divSel=document.createElement('div');
+  divSel.className='nearby-entry'; divSel.dataset.markerId=getMarkerId(marker);
+  divSel.innerHTML=`<div class="name-distance"><span>${marker.data['First Name']} ${marker.data['Last Name']} (Selected)</span><span class="distance">0 km</span></div>
+  <div class="company-name">${marker.data['Business Name']||''}</div>`;
+  divSel.addEventListener('mouseenter',()=>marker.getElement().style.filter='drop-shadow(0 0 12px #00f)');
+  divSel.addEventListener('mouseleave',()=>marker.getElement().style.filter='drop-shadow(0 0 0 rgba(0,0,0,0))');
+  listDiv.appendChild(divSel);
+
+  nearby.forEach(m=>{
+    const dist=haversineDistance(marker.getLatLng(),m.getLatLng()).toFixed(1);
+    const div=document.createElement('div');
+    div.className='nearby-entry'; div.dataset.markerId=getMarkerId(m);
+    div.innerHTML=`<div class="name-distance"><span>${m.data['First Name']} ${m.data['Last Name']}</span><span class="distance">${dist} km</span></div>
+    <div class="company-name">${m.data['Business Name']||''}</div>`;
+    div.addEventListener('mouseenter',()=>m.getElement().style.filter='drop-shadow(0 0 12px #00f)');
+    div.addEventListener('mouseleave',()=>m.getElement().style.filter='drop-shadow(0 0 0 rgba(0,0,0,0))');
+    listDiv.appendChild(div);
+  });
+}
+
+function highlightCard(marker,hover){
+  const card=document.querySelector(`[data-marker-id="${getMarkerId(marker)}"]`);
+  if(card) card.style.backgroundColor=hover?'rgba(255,255,255,0.2)':'transparent';
+}
+
+function getMarkerId(marker){
+  const d=marker.data;
+  return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_');
+}
+
+function haversineDistance(latlng1,latlng2){
+  const R=6371,dLat=(latlng2.lat-latlng1.lat)*Math.PI/180,dLon=(latlng2.lng-latlng1.lng)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(latlng1.lat*Math.PI/180)*Math.cos(latlng2.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// Update sidebar to only show visible markers
+function updateVisibleUsers(){
+  const bounds=map.getBounds();
+  const listDiv=document.getElementById('nearbyList'); listDiv.innerHTML='';
+  const visibleMarkers=markers.filter(m=>bounds.contains(m.getLatLng()));
+
+  if(visibleMarkers.length===0){
+    listDiv.textContent='No users visible on map.';
+    return;
+  }
+
+  visibleMarkers.forEach(marker=>{
+    const div=document.createElement('div');
+    div.className='nearby-entry'; div.dataset.markerId=getMarkerId(marker);
+    div.innerHTML=`<div class="name-distance"><span>${marker.data['First Name']} ${marker.data['Last Name']}</span></div>
+      <div class="company-name">${marker.data['Business Name']||''}</div>`;
+    div.addEventListener('mouseenter',()=>marker.getElement().style.filter='drop-shadow(0 0 12px #00f)');
+    div.addEventListener('mouseleave',()=>marker.getElement().style.filter='drop-shadow(0 0 0 rgba(0,0,0,0))');
+    listDiv.appendChild(div);
+  });
+}
