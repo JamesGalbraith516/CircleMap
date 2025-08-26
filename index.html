@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+  <!-- Custom CSS -->
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #sidebar {
+      width: 350px;
+      overflow-y: auto;
+      border-right: 1px solid #ddd;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    #map {
+      flex: 1;
+    }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+    .filters input, .filters select {
+      flex: 1;
+      padding: 5px;
+      font-size: 14px;
+    }
+    .user-card {
+      display: flex;
+      align-items: center;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 8px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+    .user-info {
+      flex: 1;
+    }
+    .user-info h4 {
+      margin: 0;
+      font-size: 16px;
+    }
+    .user-info p {
+      margin: 2px 0;
+      font-size: 13px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar">
+    <div class="filters">
+      <input type="text" id="searchName" placeholder="Search by name...">
+      <input type="text" id="searchLocation" placeholder="Search by location...">
+      <select id="filterIndustry"><option value="">All Industries</option></select>
+      <select id="filterCountry"><option value="">All Countries</option></select>
+    </div>
+    <div id="userList"></div>
+  </div>
+  <div id="map"></div>
+
+  <!-- Libraries -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <script>
+    // 👉 Replace with your published CSV link
+    const sheetUrl = "https://docs.google.com/spreadsheets/d/17h6qtv7Kw3ejYyK0hv7XyTUQ1y7KP3wj_w-pG4yNfkM/pub?gid=1454020769&single=true&output=csv";
+
+    const map = L.map('map').setView([20, 0], 2);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const markers = L.markerClusterGroup();
+    map.addLayer(markers);
+
+    let users = [];
+
+    function getAvatarLetter(name) {
+      return name ? name[0].toUpperCase() : "?";
+    }
+
+    function getRandomColor(str) {
+      const colors = ["#e63946", "#457b9d", "#2a9d8f", "#f4a261", "#8d99ae"];
+      let code = str.charCodeAt(0) % colors.length;
+      return colors[code];
+    }
+
+    function renderUsers(list) {
+      const container = document.getElementById("userList");
+      container.innerHTML = "";
+      list.forEach(user => {
+        const card = document.createElement("div");
+        card.className = "user-card";
+
+        const avatar = document.createElement("div");
+        avatar.className = "avatar";
+        avatar.style.background = getRandomColor(user["First Name"]);
+        avatar.innerText = getAvatarLetter(user["First Name"]);
+
+        const info = document.createElement("div");
+        info.className = "user-info";
+        info.innerHTML = `
+          <h4>${user["First Name"]} ${user["Last Name"]}</h4>
+          <p>${user.City}, ${user["Country"]}</p>
+          <p><em>${user.Industry || ""}</em></p>
+        `;
+
+        card.appendChild(avatar);
+        card.appendChild(info);
+        container.appendChild(card);
+      });
+    }
+
+    function filterUsers() {
+      const searchName = document.getElementById("searchName").value.toLowerCase();
+      const searchLocation = document.getElementById("searchLocation").value.toLowerCase();
+      const filterIndustry = document.getElementById("filterIndustry").value;
+      const filterCountry = document.getElementById("filterCountry").value;
+
+      return users.filter(u => {
+        const matchesName = (u["First Name"] + " " + u["Last Name"]).toLowerCase().includes(searchName);
+        const matchesLocation = (u.City + " " + u["State/Province"]).toLowerCase().includes(searchLocation);
+        const matchesIndustry = !filterIndustry || u.Industry === filterIndustry;
+        const matchesCountry = !filterCountry || u.Country === filterCountry;
+        return matchesName && matchesLocation && matchesIndustry && matchesCountry;
+      });
+    }
+
+    function updateMapAndList() {
+      markers.clearLayers();
+      const filtered = filterUsers();
+      renderUsers(filtered);
+
+      filtered.forEach(user => {
+        if (user.Geocode) {
+          const [lat, lng] = user.Geocode.split(",").map(Number);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            const marker = L.marker([lat, lng]).bindPopup(`
+              <strong>${user["First Name"]} ${user["Last Name"]}</strong><br>
+              ${user.City}, ${user.Country}<br>
+              ${user.Industry || ""}
+            `);
+            markers.addLayer(marker);
+          }
+        }
+      });
+      map.fitBounds(markers.getBounds(), { padding: [50, 50] });
+    }
+
+    // Fetch & parse Google Sheet CSV
+    Papa.parse(sheetUrl, {
+      download: true,
+      header: true,
+      complete: function(results) {
+        users = results.data.filter(r => r.Geocode); 
+
+        // Populate filter dropdowns
+        const industries = [...new Set(users.map(u => u.Industry).filter(Boolean))];
+        const industrySelect = document.getElementById("filterIndustry");
+        industries.forEach(ind => {
+          const opt = document.createElement("option");
+          opt.value = ind;
+          opt.textContent = ind;
+          industrySelect.appendChild(opt);
+        });
+
+        const countries = [...new Set(users.map(u => u.Country).filter(Boolean))];
+        const countrySelect = document.getElementById("filterCountry");
+        countries.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = c;
+          opt.textContent = c;
+          countrySelect.appendChild(opt);
+        });
+
+        updateMapAndList();
+      }
+    });
+
+    // Filters live update
+    document.querySelectorAll("#searchName, #searchLocation, #filterIndustry, #filterCountry")
+      .forEach(el => el.addEventListener("input", updateMapAndList));
+  </script>
+</body>
+</html>
