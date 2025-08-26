@@ -1,139 +1,73 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Live Map with Left Sidebar</title>
-  <meta charset="utf-8" />
+  <title>Map with Sidebar and Filters</title>
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Google Fonts: Roboto -->
+  <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
-  <!-- Leaflet CSS + JS -->
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Leaflet MarkerCluster -->
+  <!-- MarkerCluster -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-  <!-- PapaParse for CSV -->
+  <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <style>
     html, body { height: 100%; margin: 0; font-family: 'Roboto', sans-serif; }
     #topPanel {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      height: 60px;
-      background: #0094CD;
-      display: flex;
-      align-items: center;
-      padding: 0 1rem;
-      gap: 1rem;
-      z-index: 1000;
+      position: fixed; top: 0; left: 0; right: 0; height: 60px;
+      background: #0094CD; display: flex; align-items: center; padding: 0 1rem; gap: 1rem; z-index: 1000;
       box-sizing: border-box;
     }
     #topPanel input, #topPanel select {
-      height: 36px;
-      font-size: 14px;
-      padding: 0 0.5rem;
-      border-radius: 4px;
-      border: none;
-      font-family: 'Roboto', sans-serif;
+      height: 36px; font-size: 14px; padding: 0 0.5rem; border-radius: 4px; border: none; font-family: 'Roboto', sans-serif;
     }
-    #mapWrapper {
-      position: absolute;
-      top: 60px;
-      left: 300px; /* leave space for left sidebar */
-      right: 0;
-      bottom: 0;
-    }
-    #map { height: 100%; width: 100%; }
-
-    /* Left sidebar */
     #resultsPanel {
-      position: fixed;
-      top: 60px;
-      left: 0;
-      width: 300px;
-      bottom: 0;
-      overflow-y: auto;
-      background: rgba(0, 148, 205, 0.9);
-      color: white;
-      padding: 1rem;
-      font-size: 0.9rem;
-      z-index: 1000;
-      box-sizing: border-box;
+      position: fixed; top: 60px; left: 0; width: 300px; bottom: 0;
+      overflow-y: auto; background: rgba(0,148,205,0.95); color: white; padding: 1rem; font-size: 0.9rem; z-index: 1000; box-sizing: border-box;
     }
+    #mapWrapper { position: absolute; top: 60px; left: 300px; right: 0; bottom: 0; }
+    #map { width: 100%; height: 100%; }
 
-    .nearby-entry {
-      display: flex;
-      align-items: center;
-      padding: 0.3rem 0.3rem 0.8rem 0.3rem;
-      border-bottom: 1px solid rgba(255,255,255,0.3);
-      color: white;
-      transition: all 0.2s ease;
-      cursor: pointer;
-      gap: 0.5rem;
+    .user-card {
+      display: flex; align-items: center; padding: 0.5rem; margin-bottom: 0.5rem;
+      background: rgba(0,0,0,0.1); border-radius: 4px; cursor: pointer; transition: all 0.2s ease;
     }
-    .nearby-entry:hover { background-color: rgba(255,255,255,0.2); }
-    .letter-circle {
-      flex-shrink: 0;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #013b5c;
-      border: 3px solid white;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 16px;
-      font-family: 'Roboto', sans-serif;
+    .user-card:hover { background: rgba(255,255,255,0.2); }
+    .user-circle {
+      width: 50px; height: 50px; border-radius: 50%; background: #013b5c; border: 3px solid white;
+      color: white; font-weight: bold; font-size: 18px; display: flex; align-items: center; justify-content: center; margin-right: 0.5rem; flex-shrink: 0;
     }
-    .user-info {
-      display: flex;
-      flex-direction: column;
-    }
+    .user-info { display: flex; flex-direction: column; }
     .user-name { font-weight: 500; font-size: 0.9rem; }
     .user-company { font-size: 0.8rem; opacity: 0.9; }
     .user-industry { font-size: 0.75rem; opacity: 0.8; }
 
-    /* Cluster styling */
-    .custom-cluster {
-      background-color: #013b5c;
-      color: white;
-      border: 3px solid white;
-      border-radius: 50%;
-      text-align: center;
-      font-weight: bold;
-      line-height: 40px;
-      font-size: 16px;
-    }
-
-    /* Individual letter markers */
     .letter-marker {
-      background: #013b5c;
-      border: 3px solid white;
-      color: white;
-      border-radius: 50%;
-      text-align: center;
-      font-weight: bold;
-      line-height: 30px;
-      font-size: 14px;
-      width: 30px;
-      height: 30px;
+      background: #013b5c; border: 3px solid white; color: white; border-radius: 50%;
+      text-align: center; font-weight: bold; font-size: 14px; width: 30px; height: 30px; line-height: 24px;
     }
     .letter-marker:hover { filter: drop-shadow(0 0 12px #00f); }
+
+    .custom-cluster {
+      background-color: #013b5c; color: white; border: 3px solid white; border-radius: 50%;
+      text-align: center; font-weight: bold; line-height: 40px; font-size: 16px;
+    }
   </style>
 </head>
 <body>
 
 <div id="topPanel">
-  <input type="text" id="searchInput" placeholder="Search Name" style="width:200px;" />
-  <input type="text" id="locationInput" placeholder="Search Location" style="width:200px;" />
+  <input type="text" id="searchInput" placeholder="Search Name" style="width:400px;">
+  <input type="text" id="locationInput" placeholder="Search Location" style="width:400px;">
   <select id="typeFilter"><option value="">All Types</option></select>
   <select id="industryFilter"><option value="">All Industries</option></select>
 </div>
@@ -148,18 +82,14 @@
 </div>
 
 <script>
-const map = L.map('map', { zoomControl: true }).setView([54,-98], 4.5); // focus on US & Canada
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+const map = L.map('map', { zoomControl:true }).setView([54,-98], 4.5); // US & Canada focus
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors' }).addTo(map);
 
-const sheetURL = 'https://docs.google.com/spreadsheets/d/17h6qtv7Kw3ejYyK0hv7XyTUQ1y7KP3wj_w-pG4yNfkM/export?format=csv&gid=1454020769';
-let allData = [], markers = [], selectedMarker = null;
+const sheetURL='https://docs.google.com/spreadsheets/d/17h6qtv7Kw3ejYyK0hv7XyTUQ1y7KP3wj_w-pG4yNfkM/export?format=csv&gid=1454020769';
+let allData=[], markers=[], selectedMarker=null;
 
 const markerCluster = L.markerClusterGroup({
-  iconCreateFunction: cluster => L.divIcon({
-    html: `<div class="custom-cluster">${cluster.getChildCount()}</div>`,
-    className:'custom-cluster',
-    iconSize: L.point(40,40)
-  })
+  iconCreateFunction: cluster => L.divIcon({ html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`, className:'', iconSize:L.point(40,40) })
 });
 map.addLayer(markerCluster);
 
@@ -167,102 +97,69 @@ fetch(sheetURL).then(r=>r.text()).then(csv=>{
   const parsed = Papa.parse(csv,{header:true, skipEmptyLines:true});
   allData = parsed.data;
 
-  // Populate type filter
-  const typeSet = new Set();
-  const industrySet = new Set();
-  allData.forEach(row=>{
-    if(row['Type']) typeSet.add(row['Type']);
-    if(row['Industry']) industrySet.add(row['Industry']);
-  });
-  const typeSelect = document.getElementById('typeFilter');
-  Array.from(typeSet).sort().forEach(type=>{
-    const opt=document.createElement('option'); opt.value=type; opt.textContent=type;
-    typeSelect.appendChild(opt);
-  });
-  const industrySelect = document.getElementById('industryFilter');
-  Array.from(industrySet).sort().forEach(ind=>{
-    const opt=document.createElement('option'); opt.value=ind; opt.textContent=ind;
-    industrySelect.appendChild(opt);
-  });
+  const typeSet=new Set(), industrySet=new Set();
+  allData.forEach(r=>{ if(r['Type']) typeSet.add(r['Type']); if(r['Industry']) industrySet.add(r['Industry']); });
+
+  const typeSelect=document.getElementById('typeFilter');
+  Array.from(typeSet).sort().forEach(type=>{ const o=document.createElement('option'); o.value=type; o.textContent=type; typeSelect.appendChild(o); });
+  const industrySelect=document.getElementById('industryFilter');
+  Array.from(industrySet).sort().forEach(ind=>{ const o=document.createElement('option'); o.value=ind; o.textContent=ind; industrySelect.appendChild(o); });
 
   updateMap();
-  typeSelect.addEventListener('change', updateMap);
-  industrySelect.addEventListener('change', updateMap);
-  document.getElementById('searchInput').addEventListener('input', updateMap);
-  document.getElementById('locationInput').addEventListener('input', updateMap);
+  typeSelect.addEventListener('change',updateMap);
+  industrySelect.addEventListener('change',updateMap);
+  document.getElementById('searchInput').addEventListener('input',updateMap);
+  document.getElementById('locationInput').addEventListener('input',updateMap);
   map.on('moveend', updateVisibleUsers);
 });
 
 function createLetterMarker(user){
   const firstLetter = user['First Name'] ? user['First Name'][0].toUpperCase() : '?';
-  return L.divIcon({ html:`<div class="letter-marker">${firstLetter}</div>`, className:'', iconSize:[30,30], iconAnchor:[15,15] });
+  return L.divIcon({ html:`<div class="letter-marker">${firstLetter}</div>`, iconSize:[30,30], iconAnchor:[15,15] });
 }
 
 function updateMap(){
-  markerCluster.clearLayers(); markers = []; selectedMarker=null;
-  const typeFilter = document.getElementById('typeFilter').value.toLowerCase();
-  const industryFilter = document.getElementById('industryFilter').value.toLowerCase();
-  const nameFilter = document.getElementById('searchInput').value.toLowerCase();
-  const locationFilter = document.getElementById('locationInput').value.toLowerCase();
+  markerCluster.clearLayers(); markers=[]; selectedMarker=null;
+  const typeF=document.getElementById('typeFilter').value.toLowerCase();
+  const industryF=document.getElementById('industryFilter').value.toLowerCase();
+  const nameF=document.getElementById('searchInput').value.toLowerCase();
+  const locF=document.getElementById('locationInput').value.toLowerCase();
 
   allData.forEach(row=>{
-    if(typeFilter && row['Type']?.toLowerCase()!==typeFilter) return;
-    if(industryFilter && row['Industry']?.toLowerCase()!==industryFilter) return;
-    if(nameFilter && !(`${row['First Name']} ${row['Last Name']}`.toLowerCase().includes(nameFilter))) return;
-    if(locationFilter && row['City'] && !row['City'].toLowerCase().includes(locationFilter)) return;
-    if(!row['Geocode'] || !row['Geocode'].includes(',')) return;
+    if(typeF && row['Type']?.toLowerCase()!==typeF) return;
+    if(industryF && row['Industry']?.toLowerCase()!==industryF) return;
+    if(nameF && !(`${row['First Name']} ${row['Last Name']}`.toLowerCase().includes(nameF))) return;
+    if(locF && row['City'] && !row['City'].toLowerCase().includes(locF)) return;
+    if(!row['Geocode']||!row['Geocode'].includes(',')) return;
     const [lat,lng]=row['Geocode'].split(',').map(Number);
     if(isNaN(lat)||isNaN(lng)) return;
 
-    const marker = L.marker([lat,lng],{icon:createLetterMarker(row)});
+    const marker=L.marker([lat,lng],{icon:createLetterMarker(row)});
     marker.data=row;
-    marker.on('click',()=>handleMarkerClick(marker));
     marker.on('mouseover',()=>highlightCard(marker,true));
     marker.on('mouseout',()=>highlightCard(marker,false));
-
     markers.push(marker);
     markerCluster.addLayer(marker);
   });
   updateVisibleUsers();
 }
 
-function handleMarkerClick(marker){
-  selectedMarker=marker;
-  const listDiv=document.getElementById('nearbyList'); listDiv.innerHTML='';
-  const divSel=document.createElement('div');
-  divSel.className='nearby-entry'; divSel.dataset.markerId=getMarkerId(marker);
-  divSel.innerHTML=`<div class="letter-circle">${marker.data['First Name']?.[0].toUpperCase()||'?'}</div>
-    <div class="user-info">
-      <div class="user-name">${marker.data['First Name']} ${marker.data['Last Name']}</div>
-      <div class="user-company">${marker.data['Business Name']||''}</div>
-      <div class="user-industry">${marker.data['Industry']||''}</div>
-    </div>`;
-  divSel.addEventListener('mouseenter',()=>marker.getElement().style.filter='drop-shadow(0 0 12px #00f)');
-  divSel.addEventListener('mouseleave',()=>marker.getElement().style.filter='drop-shadow(0 0 0 rgba(0,0,0,0))');
-  listDiv.appendChild(divSel);
-}
+function getMarkerId(marker){ const d=marker.data; return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_'); }
 
 function highlightCard(marker,hover){
   const card=document.querySelector(`[data-marker-id="${getMarkerId(marker)}"]`);
-  if(card) card.style.backgroundColor=hover?'rgba(255,255,255,0.2)':'transparent';
+  if(card) card.style.backgroundColor = hover ? 'rgba(255,255,255,0.2)' : 'transparent';
 }
 
-function getMarkerId(marker){
-  const d=marker.data;
-  return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_');
-}
-
-// Update sidebar to only show visible markers
 function updateVisibleUsers(){
   const bounds=map.getBounds();
   const listDiv=document.getElementById('nearbyList'); listDiv.innerHTML='';
-  const visibleMarkers=markers.filter(m=>bounds.contains(m.getLatLng()));
-  if(visibleMarkers.length===0){ listDiv.textContent='No users visible on map.'; return; }
+  const visible=markers.filter(m=>bounds.contains(m.getLatLng()));
+  if(!visible.length){ listDiv.textContent='No users visible on map.'; return; }
 
-  visibleMarkers.forEach(marker=>{
-    const div=document.createElement('div');
-    div.className='nearby-entry'; div.dataset.markerId=getMarkerId(marker);
-    div.innerHTML=`<div class="letter-circle">${marker.data['First Name']?.[0].toUpperCase()||'?'}</div>
+  visible.forEach(marker=>{
+    const div=document.createElement('div'); div.className='user-card'; div.dataset.markerId=getMarkerId(marker);
+    div.innerHTML=`<div class="user-circle">${marker.data['First Name']?.[0].toUpperCase()||'?'}</div>
       <div class="user-info">
         <div class="user-name">${marker.data['First Name']} ${marker.data['Last Name']}</div>
         <div class="user-company">${marker.data['Business Name']||''}</div>
@@ -274,6 +171,5 @@ function updateVisibleUsers(){
   });
 }
 </script>
-
 </body>
 </html>
