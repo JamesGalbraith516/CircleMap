@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Live Map with Top Filters</title>
+  <title>Live Map with Left Sidebar</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Google Fonts: Roboto -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
   <!-- Leaflet CSS + JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -18,12 +21,10 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <style>
-    html, body { height: 100%; margin: 0; font-family: sans-serif; }
+    html, body { height: 100%; margin: 0; font-family: 'Roboto', sans-serif; }
     #topPanel {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 0; left: 0; right: 0;
       height: 60px;
       background: #0094CD;
       display: flex;
@@ -39,19 +40,22 @@
       padding: 0 0.5rem;
       border-radius: 4px;
       border: none;
+      font-family: 'Roboto', sans-serif;
     }
     #mapWrapper {
       position: absolute;
       top: 60px;
-      left: 0;
-      right: 300px; /* leave space for sidebar */
+      left: 300px; /* leave space for left sidebar */
+      right: 0;
       bottom: 0;
     }
     #map { height: 100%; width: 100%; }
+
+    /* Left sidebar */
     #resultsPanel {
       position: fixed;
       top: 60px;
-      right: 0;
+      left: 0;
       width: 300px;
       bottom: 0;
       overflow-y: auto;
@@ -60,18 +64,42 @@
       padding: 1rem;
       font-size: 0.9rem;
       z-index: 1000;
+      box-sizing: border-box;
     }
+
     .nearby-entry {
+      display: flex;
+      align-items: center;
       padding: 0.3rem 0.3rem 0.8rem 0.3rem;
       border-bottom: 1px solid rgba(255,255,255,0.3);
       color: white;
       transition: all 0.2s ease;
       cursor: pointer;
+      gap: 0.5rem;
     }
     .nearby-entry:hover { background-color: rgba(255,255,255,0.2); }
-    .name-distance { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem; }
-    .distance { font-weight: normal; font-size: 0.75rem; opacity: 0.8; }
-    .company-name { font-size: 0.8rem; margin-top: 0.2rem; opacity: 0.9; }
+    .letter-circle {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #013b5c;
+      border: 3px solid white;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+      font-family: 'Roboto', sans-serif;
+    }
+    .user-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .user-name { font-weight: 500; font-size: 0.9rem; }
+    .user-company { font-size: 0.8rem; opacity: 0.9; }
+    .user-industry { font-size: 0.75rem; opacity: 0.8; }
 
     /* Cluster styling */
     .custom-cluster {
@@ -104,14 +132,10 @@
 <body>
 
 <div id="topPanel">
-  <input type="text" id="searchInput" placeholder="Search Name" />
-  <input type="text" id="locationInput" placeholder="Search Location" />
+  <input type="text" id="searchInput" placeholder="Search Name" style="width:200px;" />
+  <input type="text" id="locationInput" placeholder="Search Location" style="width:200px;" />
   <select id="typeFilter"><option value="">All Types</option></select>
-  <input type="number" id="distanceFilter" min="1" max="1000" step="1" value="50" />
-</div>
-
-<div id="mapWrapper">
-  <div id="map"></div>
+  <select id="industryFilter"><option value="">All Industries</option></select>
 </div>
 
 <div id="resultsPanel">
@@ -119,23 +143,23 @@
   <div id="nearbyList">Click a marker to see users.</div>
 </div>
 
+<div id="mapWrapper">
+  <div id="map"></div>
+</div>
+
 <script>
-const map = L.map('map', { zoomControl: true }).setView([50.5, -95.0], 4);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
+const map = L.map('map', { zoomControl: true }).setView([54,-98], 4.5); // focus on US & Canada
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
 
 const sheetURL = 'https://docs.google.com/spreadsheets/d/17h6qtv7Kw3ejYyK0hv7XyTUQ1y7KP3wj_w-pG4yNfkM/export?format=csv&gid=1454020769';
-
 let allData = [], markers = [], selectedMarker = null;
+
 const markerCluster = L.markerClusterGroup({
-  iconCreateFunction: function(cluster){
-    return L.divIcon({
-      html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`,
-      className:'custom-cluster',
-      iconSize:L.point(40,40)
-    });
-  }
+  iconCreateFunction: cluster => L.divIcon({
+    html: `<div class="custom-cluster">${cluster.getChildCount()}</div>`,
+    className:'custom-cluster',
+    iconSize: L.point(40,40)
+  })
 });
 map.addLayer(markerCluster);
 
@@ -145,19 +169,27 @@ fetch(sheetURL).then(r=>r.text()).then(csv=>{
 
   // Populate type filter
   const typeSet = new Set();
-  allData.forEach(row=>{ if(row['Type']) typeSet.add(row['Type']); });
+  const industrySet = new Set();
+  allData.forEach(row=>{
+    if(row['Type']) typeSet.add(row['Type']);
+    if(row['Industry']) industrySet.add(row['Industry']);
+  });
   const typeSelect = document.getElementById('typeFilter');
   Array.from(typeSet).sort().forEach(type=>{
-    const opt = document.createElement('option');
-    opt.value=type; opt.textContent=type;
+    const opt=document.createElement('option'); opt.value=type; opt.textContent=type;
     typeSelect.appendChild(opt);
+  });
+  const industrySelect = document.getElementById('industryFilter');
+  Array.from(industrySet).sort().forEach(ind=>{
+    const opt=document.createElement('option'); opt.value=ind; opt.textContent=ind;
+    industrySelect.appendChild(opt);
   });
 
   updateMap();
-  document.getElementById('typeFilter').addEventListener('change',updateMap);
-  document.getElementById('distanceFilter').addEventListener('input',updateMap);
-  document.getElementById('searchInput').addEventListener('input',updateMap);
-  document.getElementById('locationInput').addEventListener('input',updateMap);
+  typeSelect.addEventListener('change', updateMap);
+  industrySelect.addEventListener('change', updateMap);
+  document.getElementById('searchInput').addEventListener('input', updateMap);
+  document.getElementById('locationInput').addEventListener('input', updateMap);
   map.on('moveend', updateVisibleUsers);
 });
 
@@ -169,11 +201,13 @@ function createLetterMarker(user){
 function updateMap(){
   markerCluster.clearLayers(); markers = []; selectedMarker=null;
   const typeFilter = document.getElementById('typeFilter').value.toLowerCase();
+  const industryFilter = document.getElementById('industryFilter').value.toLowerCase();
   const nameFilter = document.getElementById('searchInput').value.toLowerCase();
   const locationFilter = document.getElementById('locationInput').value.toLowerCase();
 
   allData.forEach(row=>{
     if(typeFilter && row['Type']?.toLowerCase()!==typeFilter) return;
+    if(industryFilter && row['Industry']?.toLowerCase()!==industryFilter) return;
     if(nameFilter && !(`${row['First Name']} ${row['Last Name']}`.toLowerCase().includes(nameFilter))) return;
     if(locationFilter && row['City'] && !row['City'].toLowerCase().includes(locationFilter)) return;
     if(!row['Geocode'] || !row['Geocode'].includes(',')) return;
@@ -194,28 +228,18 @@ function updateMap(){
 
 function handleMarkerClick(marker){
   selectedMarker=marker;
-  const radiusKm=parseFloat(document.getElementById('distanceFilter').value)||50;
-  const nearby=markers.filter(m=>m!==marker && haversineDistance(marker.getLatLng(),m.getLatLng())<=radiusKm);
   const listDiv=document.getElementById('nearbyList'); listDiv.innerHTML='';
-
   const divSel=document.createElement('div');
   divSel.className='nearby-entry'; divSel.dataset.markerId=getMarkerId(marker);
-  divSel.innerHTML=`<div class="name-distance"><span>${marker.data['First Name']} ${marker.data['Last Name']} (Selected)</span><span class="distance">0 km</span></div>
-  <div class="company-name">${marker.data['Business Name']||''}</div>`;
+  divSel.innerHTML=`<div class="letter-circle">${marker.data['First Name']?.[0].toUpperCase()||'?'}</div>
+    <div class="user-info">
+      <div class="user-name">${marker.data['First Name']} ${marker.data['Last Name']}</div>
+      <div class="user-company">${marker.data['Business Name']||''}</div>
+      <div class="user-industry">${marker.data['Industry']||''}</div>
+    </div>`;
   divSel.addEventListener('mouseenter',()=>marker.getElement().style.filter='drop-shadow(0 0 12px #00f)');
   divSel.addEventListener('mouseleave',()=>marker.getElement().style.filter='drop-shadow(0 0 0 rgba(0,0,0,0))');
   listDiv.appendChild(divSel);
-
-  nearby.forEach(m=>{
-    const dist=haversineDistance(marker.getLatLng(),m.getLatLng()).toFixed(1);
-    const div=document.createElement('div');
-    div.className='nearby-entry'; div.dataset.markerId=getMarkerId(m);
-    div.innerHTML=`<div class="name-distance"><span>${m.data['First Name']} ${m.data['Last Name']}</span><span class="distance">${dist} km</span></div>
-    <div class="company-name">${m.data['Business Name']||''}</div>`;
-    div.addEventListener('mouseenter',()=>m.getElement().style.filter='drop-shadow(0 0 12px #00f)');
-    div.addEventListener('mouseleave',()=>m.getElement().style.filter='drop-shadow(0 0 0 rgba(0,0,0,0))');
-    listDiv.appendChild(div);
-  });
 }
 
 function highlightCard(marker,hover){
@@ -228,28 +252,22 @@ function getMarkerId(marker){
   return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_');
 }
 
-function haversineDistance(latlng1,latlng2){
-  const R=6371,dLat=(latlng2.lat-latlng1.lat)*Math.PI/180,dLon=(latlng2.lng-latlng1.lng)*Math.PI/180;
-  const a=Math.sin(dLat/2)**2+Math.cos(latlng1.lat*Math.PI/180)*Math.cos(latlng2.lat*Math.PI/180)*Math.sin(dLon/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
 // Update sidebar to only show visible markers
 function updateVisibleUsers(){
   const bounds=map.getBounds();
   const listDiv=document.getElementById('nearbyList'); listDiv.innerHTML='';
   const visibleMarkers=markers.filter(m=>bounds.contains(m.getLatLng()));
-
-  if(visibleMarkers.length===0){
-    listDiv.textContent='No users visible on map.';
-    return;
-  }
+  if(visibleMarkers.length===0){ listDiv.textContent='No users visible on map.'; return; }
 
   visibleMarkers.forEach(marker=>{
     const div=document.createElement('div');
     div.className='nearby-entry'; div.dataset.markerId=getMarkerId(marker);
-    div.innerHTML=`<div class="name-distance"><span>${marker.data['First Name']} ${marker.data['Last Name']}</span></div>
-      <div class="company-name">${marker.data['Business Name']||''}</div>`;
+    div.innerHTML=`<div class="letter-circle">${marker.data['First Name']?.[0].toUpperCase()||'?'}</div>
+      <div class="user-info">
+        <div class="user-name">${marker.data['First Name']} ${marker.data['Last Name']}</div>
+        <div class="user-company">${marker.data['Business Name']||''}</div>
+        <div class="user-industry">${marker.data['Industry']||''}</div>
+      </div>`;
     div.addEventListener('mouseenter',()=>marker.getElement().style.filter='drop-shadow(0 0 12px #00f)');
     div.addEventListener('mouseleave',()=>marker.getElement().style.filter='drop-shadow(0 0 0 rgba(0,0,0,0))');
     listDiv.appendChild(div);
