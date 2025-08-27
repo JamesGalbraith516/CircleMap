@@ -22,53 +22,80 @@
 
   <style>
     html, body { height: 100%; margin: 0; font-family: 'Roboto', sans-serif; }
+
+    /* --- Top Panel --- */
     #topPanel {
       position: fixed; top: 0; left: 0; right: 0; height: 60px;
-      background: #0094CD; display: flex; align-items: center; padding: 0 1rem; gap: 1rem; z-index: 1000;
-      box-sizing: border-box;
+      background: #fff; display: flex; align-items: center;
+      padding: 0 1rem; gap: 1rem; z-index: 1000;
+      box-sizing: border-box; border-bottom: 1px solid #ccc;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+      overflow-x: auto; white-space: nowrap;
     }
     #topPanel input, #topPanel select {
-      height: 36px; font-size: 14px; padding: 0 0.5rem; border-radius: 4px; border: none; font-family: 'Roboto', sans-serif;
+      height: 36px; font-size: 14px; padding: 0 0.5rem;
+      border-radius: 4px; border: 1px solid #ccc;
+      font-family: 'Roboto', sans-serif; background: #fff; color: #333;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
+    #topPanel input { min-width: 200px; width: 800px; max-width: 100%; }
+    #topPanel select { min-width: 180px; }
+
+    /* --- Sidebar --- */
     #resultsPanel {
       position: fixed; top: 60px; left: 0; width: 300px; bottom: 0;
-      overflow-y: auto; background: rgba(0,148,205,0.95); color: white; padding: 1rem; font-size: 0.9rem; z-index: 1000; box-sizing: border-box;
+      overflow-y: auto; background: #fff; color: #333;
+      padding: 1rem; font-size: 0.9rem; z-index: 1000;
+      box-sizing: border-box; border-right: 1px solid #ccc;
+      box-shadow: 2px 0 4px rgba(0,0,0,0.08);
     }
     #mapWrapper { position: absolute; top: 60px; left: 300px; right: 0; bottom: 0; }
     #map { width: 100%; height: 100%; }
 
+    /* --- User Cards --- */
     .user-card {
-      display: flex; align-items: center; padding: 0.5rem; margin-bottom: 0.5rem;
-      background: rgba(0,0,0,0.1); border-radius: 4px; cursor: pointer; transition: all 0.2s ease;
+      display: flex; align-items: center; padding: 0.6rem; margin-bottom: 0.6rem;
+      background: #f9f9f9; border-radius: 6px; cursor: pointer;
+      transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
-    .user-card:hover { background: rgba(255,255,255,0.2); }
+    .user-card:hover { background: #f1f1f1; }
+
     .user-circle {
-      width: 50px; height: 50px; border-radius: 50%; background: #013b5c; border: 3px solid white;
-      color: white; font-weight: bold; font-size: 18px; display: flex; align-items: center; justify-content: center; margin-right: 0.5rem; flex-shrink: 0;
+      width: 60px; height: 60px; border-radius: 50%; background: #013b5c; border: 3px solid white;
+      color: white; font-weight: bold; font-size: 20px;
+      display: flex; align-items: center; justify-content: center;
+      margin-right: 0.75rem; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     .user-info { display: flex; flex-direction: column; }
-    .user-name { font-weight: 500; font-size: 0.9rem; }
-    .user-company { font-size: 0.8rem; opacity: 0.9; }
-    .user-industry { font-size: 0.75rem; opacity: 0.8; }
+    .user-name { font-weight: 500; font-size: 1rem; margin-bottom: 0.1rem; }
+    .user-company { font-size: 0.85rem; color: #444; }
+    .user-industry { font-size: 0.8rem; color: #666; }
+    .user-location { font-size: 0.8rem; color: #666; }
 
+    /* --- Markers --- */
     .letter-marker {
-      background: #013b5c; border: 3px solid white; color: white; border-radius: 50%;
-      text-align: center; font-weight: bold; font-size: 14px; width: 30px; height: 30px; line-height: 24px;
+      background: #013b5c; border: 3px solid white; color: white;
+      border-radius: 50%; text-align: center; font-weight: bold;
+      font-size: 16px; width: 40px; height: 40px; line-height: 34px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
     }
     .letter-marker:hover { filter: drop-shadow(0 0 12px #00f); }
 
+    /* --- Clusters --- */
     .custom-cluster {
-      background-color: #013b5c; color: white; border: 3px solid white; border-radius: 50%;
-      text-align: center; font-weight: bold; line-height: 40px; font-size: 16px;
+      background-color: #013b5c; color: white; border: 3px solid white;
+      border-radius: 50%; text-align: center; font-weight: bold;
+      line-height: 34px; font-size: 16px; width: 40px; height: 40px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
     }
   </style>
 </head>
 <body>
 
 <div id="topPanel">
-  <input type="text" id="searchInput" placeholder="Search Name" style="width:400px;">
-  <input type="text" id="locationInput" placeholder="Search Location" style="width:400px;">
-  <select id="typeFilter"><option value="">All Types</option></select>
+  <input type="text" id="searchInput" placeholder="Search Name">
+  <input type="text" id="locationInput" placeholder="Search Location">
+  <select id="countryFilter"><option value="">All Countries</option></select>
   <select id="industryFilter"><option value="">All Industries</option></select>
 </div>
 
@@ -89,7 +116,10 @@ const sheetURL='https://docs.google.com/spreadsheets/d/17h6qtv7Kw3ejYyK0hv7XyTUQ
 let allData=[], markers=[], selectedMarker=null;
 
 const markerCluster = L.markerClusterGroup({
-  iconCreateFunction: cluster => L.divIcon({ html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`, className:'', iconSize:L.point(40,40) })
+  iconCreateFunction: cluster => L.divIcon({
+    html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`,
+    className:'', iconSize:[40,40], iconAnchor:[20,20]
+  })
 });
 map.addLayer(markerCluster);
 
@@ -97,16 +127,23 @@ fetch(sheetURL).then(r=>r.text()).then(csv=>{
   const parsed = Papa.parse(csv,{header:true, skipEmptyLines:true});
   allData = parsed.data;
 
-  const typeSet=new Set(), industrySet=new Set();
-  allData.forEach(r=>{ if(r['Type']) typeSet.add(r['Type']); if(r['Industry']) industrySet.add(r['Industry']); });
+  const countrySet=new Set(), industrySet=new Set();
+  allData.forEach(r=>{
+    if(r['Country']) countrySet.add(r['Country']);
+    if(r['Industry']) industrySet.add(r['Industry']);
+  });
 
-  const typeSelect=document.getElementById('typeFilter');
-  Array.from(typeSet).sort().forEach(type=>{ const o=document.createElement('option'); o.value=type; o.textContent=type; typeSelect.appendChild(o); });
+  const countrySelect=document.getElementById('countryFilter');
+  Array.from(countrySet).sort().forEach(c=>{
+    const o=document.createElement('option'); o.value=c; o.textContent=c; countrySelect.appendChild(o);
+  });
   const industrySelect=document.getElementById('industryFilter');
-  Array.from(industrySet).sort().forEach(ind=>{ const o=document.createElement('option'); o.value=ind; o.textContent=ind; industrySelect.appendChild(o); });
+  Array.from(industrySet).sort().forEach(ind=>{
+    const o=document.createElement('option'); o.value=ind; o.textContent=ind; industrySelect.appendChild(o);
+  });
 
   updateMap();
-  typeSelect.addEventListener('change',updateMap);
+  countrySelect.addEventListener('change',updateMap);
   industrySelect.addEventListener('change',updateMap);
   document.getElementById('searchInput').addEventListener('input',updateMap);
   document.getElementById('locationInput').addEventListener('input',updateMap);
@@ -115,18 +152,18 @@ fetch(sheetURL).then(r=>r.text()).then(csv=>{
 
 function createLetterMarker(user){
   const firstLetter = user['First Name'] ? user['First Name'][0].toUpperCase() : '?';
-  return L.divIcon({ html:`<div class="letter-marker">${firstLetter}</div>`, iconSize:[30,30], iconAnchor:[15,15] });
+  return L.divIcon({ html:`<div class="letter-marker">${firstLetter}</div>`, iconSize:[40,40], iconAnchor:[20,20] });
 }
 
 function updateMap(){
   markerCluster.clearLayers(); markers=[]; selectedMarker=null;
-  const typeF=document.getElementById('typeFilter').value.toLowerCase();
+  const countryF=document.getElementById('countryFilter').value.toLowerCase();
   const industryF=document.getElementById('industryFilter').value.toLowerCase();
   const nameF=document.getElementById('searchInput').value.toLowerCase();
   const locF=document.getElementById('locationInput').value.toLowerCase();
 
   allData.forEach(row=>{
-    if(typeF && row['Type']?.toLowerCase()!==typeF) return;
+    if(countryF && row['Country']?.toLowerCase()!==countryF) return;
     if(industryF && row['Industry']?.toLowerCase()!==industryF) return;
     if(nameF && !(`${row['First Name']} ${row['Last Name']}`.toLowerCase().includes(nameF))) return;
     if(locF && row['City'] && !row['City'].toLowerCase().includes(locF)) return;
@@ -144,11 +181,14 @@ function updateMap(){
   updateVisibleUsers();
 }
 
-function getMarkerId(marker){ const d=marker.data; return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_'); }
+function getMarkerId(marker){
+  const d=marker.data;
+  return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_');
+}
 
 function highlightCard(marker,hover){
   const card=document.querySelector(`[data-marker-id="${getMarkerId(marker)}"]`);
-  if(card) card.style.backgroundColor = hover ? 'rgba(255,255,255,0.2)' : 'transparent';
+  if(card) card.style.backgroundColor = hover ? '#e9f5ff' : '#f9f9f9';
 }
 
 function updateVisibleUsers(){
@@ -158,15 +198,17 @@ function updateVisibleUsers(){
   if(!visible.length){ listDiv.textContent='No users visible on map.'; return; }
 
   visible.forEach(marker=>{
+    const d=marker.data;
     const div=document.createElement('div'); div.className='user-card'; div.dataset.markerId=getMarkerId(marker);
-    div.innerHTML=`<div class="user-circle">${marker.data['First Name']?.[0].toUpperCase()||'?'}</div>
+    div.innerHTML=`<div class="user-circle">${d['First Name']?.[0].toUpperCase()||'?'}</div>
       <div class="user-info">
-        <div class="user-name">${marker.data['First Name']} ${marker.data['Last Name']}</div>
-        <div class="user-company">${marker.data['Business Name']||''}</div>
-        <div class="user-industry">${marker.data['Industry']||''}</div>
+        <div class="user-name">${d['First Name']} ${d['Last Name']}</div>
+        <div class="user-company">${d['Business Name']||''}</div>
+        <div class="user-industry">${d['Industry']||''}</div>
+        <div class="user-location">${d['City']||''}${d['State/Province']?', '+d['State/Province']:''}</div>
       </div>`;
     div.addEventListener('mouseenter',()=>marker.getElement().style.filter='drop-shadow(0 0 12px #00f)');
-    div.addEventListener('mouseleave',()=>marker.getElement().style.filter='drop-shadow(0 0 0 rgba(0,0,0,0))');
+    div.addEventListener('mouseleave',()=>marker.getElement().style.filter='none');
     listDiv.appendChild(div);
   });
 }
