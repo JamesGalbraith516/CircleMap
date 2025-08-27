@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Map with Sidebar and Filters</title>
+  <title>CircleMap</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -219,10 +219,10 @@ function highlightCard(marker,hover){
   const parent = markerCluster.getVisibleParent(marker);
   if(parent && parent !== marker){
     const clusterEl = parent._icon;
-    if(clusterEl) clusterEl.style.filter = hover ? 'drop-shadow(0 0 12px #0096cd)' : '';
+    if(clusterEl) clusterEl.style.filter = hover ? 'drop-shadow(0 0 9px #0096cd)' : '';
   }else{
     const el=marker.getElement && marker.getElement();
-    if(el) el.style.filter = hover ? 'drop-shadow(0 0 12px #0096cd)' : '';
+    if(el) el.style.filter = hover ? 'drop-shadow(0 0 9px #0096cd)' : '';
   }
 }
 
@@ -258,7 +258,7 @@ map.on('zoomend', updateVisibleUsers);
 markerCluster.on('clustermouseover', e=>{
   const cluster = e.layer;
   const icon = cluster._icon;
-  if(icon) icon.style.filter = 'drop-shadow(0 0 12px #0096cd)';
+  if(icon) icon.style.filter = 'drop-shadow(0 0 9px #0096cd)';
   const children = cluster.getAllChildMarkers();
   children.forEach(m=>{
     const card=document.querySelector(`[data-marker-id="${getMarkerId(m)}"]`);
