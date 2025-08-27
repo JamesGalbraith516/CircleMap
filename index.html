@@ -34,6 +34,7 @@
     }
     #topPanel input, #topPanel select, #clearFilters {
       font-weight: bold;
+      font-family: 'Roboto', sans-serif;
     }
     #topPanel input {
       height: 36px; font-size: 14px; padding-left:28px; padding-right:0.5rem;
@@ -46,6 +47,7 @@
       border-radius:4px; border:1px solid #ccc; background:#f7f9fb; color:#333;
       min-width:180px;
     }
+    #topPanel select option { font-weight:bold; font-family:'Roboto',sans-serif; }
     #clearFilters {
       height:36px; padding:0 12px;
       border-radius:4px; border:none; background:#66889e; color:white; cursor:pointer;
@@ -70,13 +72,13 @@
     #resultsPanel {
       position: fixed; top: 60px; left: 0; width: 350px; bottom: 0;
       overflow-y: auto; background:#f7f9fb; color: #333;
-      padding:0.5rem 0.5rem; font-size:0.9rem; z-index:1000; box-sizing:border-box;
+      padding:0.75rem 0.5rem; font-size:0.9rem; z-index:1000; box-sizing:border-box;
       border-right:1px solid #ccc; box-shadow:2px 0 4px rgba(0,0,0,0.08);
       display:flex; flex-direction:column;
     }
-    #sidebarHeader { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; }
+    #sidebarHeader { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; position:relative; }
     #sidebarHeader h3 { margin:0; font-size:1.5rem; color:#013b5c; }
-    .switch { position: relative; display: inline-block; width:40px; height:20px; }
+    .switch { position: absolute; right:0; display: inline-block; width:40px; height:20px; }
     .switch input { opacity:0; width:0; height:0; }
     .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#ccc; transition:.4s; border-radius:20px; }
     .slider:before { position:absolute; content:""; height:16px; width:16px; left:2px; bottom:2px; background-color:white; transition:.4s; border-radius:50%; }
@@ -131,16 +133,15 @@
 
 <div id="topPanel">
   <div class="search-wrapper">
-    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M9.5 3A6.5 6.5 0 109.5 16a6.5 6.5 0 000-13zm0 11a4.5 4.5 0 110-9 4.5 4.5 0 010 9zm10 8l-5-5"/></svg>
+    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27 A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16 c1.61 0 3.09-.59 4.23-1.57l.27.28v.79 l5 4.99L20.49 19l-4.99-5zm-6 0 C8.01 14 6 11.99 6 9.5S8.01 5 10.5 5 15 7.01 15 9.5 12.99 14 10.5 14z"/></svg>
     <input type="text" id="searchInput" placeholder="Search by Name">
     <div id="nameAutocomplete" class="autocomplete-list"></div>
   </div>
   <div class="search-wrapper">
-    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 3.87 3.13 7 7 7 3.87 0 7-3.13 7-7 0-3.87-3.13-7-7-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
+    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5 a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/></svg>
     <input type="text" id="locationInput" placeholder="Search by Location">
     <div id="locationAutocomplete" class="autocomplete-list"></div>
   </div>
-  <select id="countryFilter"><option value="">All Countries</option></select>
   <select id="industryFilter"><option value="">All Industries</option></select>
   <button id="clearFilters">Clear All Filters</button>
 </div>
@@ -149,7 +150,7 @@
   <div id="sidebarHeader">
     <h3>Users</h3>
     <label class="switch">
-      <input type="checkbox" id="showMapToggle" checked>
+      <input type="checkbox" id="toggleMap" checked>
       <span class="slider round"></span>
     </label>
   </div>
@@ -159,96 +160,86 @@
 <div id="mapWrapper"><div id="map"></div></div>
 
 <script>
-const map = L.map('map',{zoomControl:true}).setView([54,-98],4.5);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+const map = L.map('map', { zoomControl:true }).setView([54,-98], 4.5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors' }).addTo(map);
 
 const sheetURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vSm2djr9eOyF8SI92KcfrCsrFEcW3dmaStUT4H0Ard8A1BUKKgd08owmHvG6TT7AdfPXB26pJ-Stzjw/pub?gid=528897676&single=true&output=csv';
 let allData=[], markers=[], selectedMarker=null;
 
 const markerCluster = L.markerClusterGroup({
   iconCreateFunction: cluster => L.divIcon({ html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`, className:'', iconSize:L.point(40,40) }),
-  showCoverageOnHover:false,
-  spiderfyOnMaxZoom:true
+  showCoverageOnHover:false
 });
 map.addLayer(markerCluster);
-
-const nameInput = document.getElementById('searchInput');
-const locationInput = document.getElementById('locationInput');
-const nameAutocomplete = document.getElementById('nameAutocomplete');
-const locationAutocomplete = document.getElementById('locationAutocomplete');
 
 fetch(sheetURL).then(r=>r.text()).then(csv=>{
   const parsed = Papa.parse(csv,{header:true, skipEmptyLines:true});
   allData = parsed.data;
 
-  const countrySet=new Set(), industrySet=new Set();
-  allData.forEach(r=>{ if(r['Country']) countrySet.add(r['Country']); if(r['Industry']) industrySet.add(r['Industry']); });
+  const industrySet=new Set();
+  allData.forEach(r=>{ if(r['Industry']) industrySet.add(r['Industry']); });
 
-  const countrySelect=document.getElementById('countryFilter');
-  Array.from(countrySet).sort().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; countrySelect.appendChild(o); });
   const industrySelect=document.getElementById('industryFilter');
-  Array.from(industrySet).sort().forEach(i=>{ const o=document.createElement('option'); o.value=i; o.textContent=i; industrySelect.appendChild(o); });
+  Array.from(industrySet).sort().forEach(ind=>{ const o=document.createElement('option'); o.value=ind; o.textContent=ind; industrySelect.appendChild(o); });
 
   updateMap();
-  countrySelect.addEventListener('change',updateMap);
   industrySelect.addEventListener('change',updateMap);
-  nameInput.addEventListener('input',()=>autocomplete(nameInput,nameAutocomplete,'name'));
-  locationInput.addEventListener('input',()=>autocomplete(locationInput,locationAutocomplete,'location'));
+  document.getElementById('searchInput').addEventListener('input',updateMap);
+  document.getElementById('locationInput').addEventListener('input',updateMap);
+  document.getElementById('clearFilters').addEventListener('click',()=>{
+    document.getElementById('searchInput').value='';
+    document.getElementById('locationInput').value='';
+    document.getElementById('industryFilter').value='';
+    updateMap();
+  });
   map.on('moveend', updateVisibleUsers);
 });
 
-// Utility: round coords to 3 decimals
-function roundCoord(num){ return parseFloat(num.toFixed(3)); }
-
-// Marker creation
 function createLetterMarker(user){
   const firstLetter = user['First Name'] ? user['First Name'][0].toUpperCase() : '?';
   return L.divIcon({ html:`<div class="letter-marker">${firstLetter}</div>`, iconSize:[40,40], iconAnchor:[20,20] });
 }
 
-// Update markers
 function updateMap(){
   markerCluster.clearLayers(); markers=[]; selectedMarker=null;
-  const countryF=document.getElementById('countryFilter').value.toLowerCase();
   const industryF=document.getElementById('industryFilter').value.toLowerCase();
-  const nameF=nameInput.value.toLowerCase();
-  const locF=locationInput.value.toLowerCase();
+  const nameF=document.getElementById('searchInput').value.toLowerCase();
+  const locF=document.getElementById('locationInput').value.toLowerCase();
 
   allData.forEach(row=>{
-    if(countryF && row['Country']?.toLowerCase()!==countryF) return;
     if(industryF && row['Industry']?.toLowerCase()!==industryF) return;
     if(nameF && !(`${row['First Name']} ${row['Last Name']}`.toLowerCase().includes(nameF))) return;
     if(locF && row['City'] && !row['City'].toLowerCase().includes(locF)) return;
     if(!row['Geocode']||!row['Geocode'].includes(',')) return;
     let [lat,lng]=row['Geocode'].split(',').map(Number);
     if(isNaN(lat)||isNaN(lng)) return;
-    lat = roundCoord(lat); lng = roundCoord(lng);
+    lat=parseFloat(lat.toFixed(2)); lng=parseFloat(lng.toFixed(2));
+
     const marker=L.marker([lat,lng],{icon:createLetterMarker(row)});
     marker.data=row;
     marker.on('mouseover',()=>highlightCard(marker,true));
     marker.on('mouseout',()=>highlightCard(marker,false));
+    marker.on('click',()=>{map.setView(marker.getLatLng(),8); pulseMarker(marker);});
     markers.push(marker);
     markerCluster.addLayer(marker);
   });
-
-  // Click cluster zoom
-  markerCluster.on('clusterclick', cluster=>{
-    map.fitBounds(cluster.layer.getBounds());
-  });
-
   updateVisibleUsers();
 }
 
-// Get marker ID
-function getMarkerId(marker){ const d=marker.data; return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_'); }
-
-// Highlight card
-function highlightCard(marker,hover){
-  const card=document.querySelector(`[data-marker-id="${getMarkerId(marker)}"]`);
-  if(card) card.style.backgroundColor = hover ? 'rgba(0,128,255,0.15)' : '#fff';
+function pulseMarker(marker){
+  const el=marker.getElement();
+  if(!el) return;
+  el.classList.add('pulse');
+  setTimeout(()=>el.classList.remove('pulse'),1200);
 }
 
-// Update sidebar users
+function getMarkerId(marker){ const d=marker.data; return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_'); }
+
+function highlightCard(marker,hover){
+  const card=document.querySelector(`[data-marker-id="${getMarkerId(marker)}"]`);
+  if(card) card.style.backgroundColor = hover ? 'rgba(255,255,255,0.2)' : '#fff';
+}
+
 function updateVisibleUsers(){
   const bounds=map.getBounds();
   const listDiv=document.getElementById('nearbyList'); listDiv.innerHTML='';
@@ -262,68 +253,14 @@ function updateVisibleUsers(){
         <div class="user-name">${marker.data['First Name']} ${marker.data['Last Name']}</div>
         <div class="user-company">${marker.data['Business Name']||''}</div>
         <div class="user-industry">${marker.data['Industry']||''}</div>
-        <div class="user-location">${marker.data['City']||''}${marker.data['State/Province']? ', '+marker.data['State/Province']:''}</div>
+        <div class="user-location">${marker.data['City']||''}, ${marker.data['State/Province']||''}</div>
       </div>`;
-    div.addEventListener('click', ()=>{
-      map.setView(marker.getLatLng(),8);
-      highlightMarker(marker);
-    });
+    div.addEventListener('mouseenter',()=>marker.getElement().style.filter='drop-shadow(0 0 12px #00f)');
+    div.addEventListener('mouseleave',()=>marker.getElement().style.filter='drop-shadow(0 0 0 rgba(0,0,0,0))');
+    div.addEventListener('click',()=>{map.setView(marker.getLatLng(),8); pulseMarker(marker);});
     listDiv.appendChild(div);
   });
 }
-
-// Highlight marker with pulse
-function highlightMarker(marker){
-  if(selectedMarker) selectedMarker.getElement()?.classList.remove('pulse');
-  if(selectedMarker && selectedMarker !== marker) highlightCard(selectedMarker,false);
-  selectedMarker = marker;
-  highlightCard(marker,true);
-  const el = marker.getElement();
-  if(el){ el.classList.add('pulse'); setTimeout(()=>el.classList.remove('pulse'), 1200); }
-}
-
-// Autocomplete
-function autocomplete(input, container, type){
-  const val = input.value.toLowerCase();
-  container.innerHTML=''; if(!val){ container.style.display='none'; return; }
-  const results = allData.filter(r=>{
-    if(type==='name') return `${r['First Name']} ${r['Last Name']}`.toLowerCase().includes(val);
-    if(type==='location') return r['City']?.toLowerCase().includes(val);
-    return false;
-  }).slice(0,5);
-  results.forEach(r=>{
-    const div=document.createElement('div'); div.className='autocomplete-item';
-    div.textContent = type==='name' ? `${r['First Name']} ${r['Last Name']}` : r['City'];
-    div.addEventListener('click', ()=>{
-      if(type==='name'){ input.value=`${r['First Name']} ${r['Last Name']}`; }
-      else { input.value=r['City']; }
-      container.style.display='none';
-      map.setView([roundCoord(parseFloat(r['Geocode'].split(',')[0])), roundCoord(parseFloat(r['Geocode'].split(',')[1]))], 8);
-    });
-    container.appendChild(div);
-  });
-  container.style.display = results.length ? 'block' : 'none';
-}
-
-// Close autocomplete when clicking outside
-document.addEventListener('click', (e)=>{
-  if(!nameInput.contains(e.target)) nameAutocomplete.style.display='none';
-  if(!locationInput.contains(e.target)) locationAutocomplete.style.display='none';
-});
-
-// Clear filters
-document.getElementById('clearFilters').addEventListener('click', ()=>{
-  nameInput.value=''; locationInput.value=''; document.getElementById('countryFilter').value=''; document.getElementById('industryFilter').value='';
-  updateMap();
-});
-
-// Show Map toggle
-document.getElementById('showMapToggle').addEventListener('change', (e)=>{
-  const checked = e.target.checked;
-  document.getElementById('mapWrapper').style.display = checked ? 'block' : 'none';
-  document.getElementById('resultsPanel').style.width = checked ? '350px' : '100%';
-  updateVisibleUsers();
-});
 </script>
 </body>
 </html>
