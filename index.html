@@ -22,34 +22,46 @@
 
   <style>
     html, body { height: 100%; margin: 0; font-family: 'Roboto', sans-serif; }
+
+    /* Top panel */
     #topPanel {
       position: fixed; top: 0; left: 0; right: 0; height: 60px;
       background: #fff; display: flex; align-items: center; padding: 0 15px; gap: 1rem; z-index: 1000;
       box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    #topPanel input, #topPanel select, #clearFilters {
-      height: 36px; font-size: 14px; padding: 0 0.5rem; border-radius: 4px; border: 1px solid #ccc; font-family: 'Roboto', sans-serif; font-weight: bold;
-      background: #f7f9fb;
-      max-width: 300px;
-      flex:1;
+    #topPanel input, #topPanel select {
+      height: 36px; font-size: 14px; padding: 0 0.5rem; border-radius: 4px; border: 1px solid #ccc; font-weight: bold;
+      background: #f7f9fb; flex: 1; max-width: none;
     }
     #clearFilters {
-      background-color: #66889e; color: white; cursor: pointer;
-      flex:0 0 auto;
+      height: 36px; font-size: 14px; padding: 0 0.5rem;
+      background-color: #66889e; color: white; border: none; border-radius: 4px;
+      cursor: pointer; flex: 0 0 auto; margin-left: auto;
     }
+
+    /* Sidebar */
     #resultsPanel {
       position: fixed; top: 60px; left: 0; width: 350px; bottom: 0;
       overflow-y: auto; background: #f7f9fb; color: #013b5c; padding: 1rem; font-size: 0.9rem; z-index: 1000; box-sizing: border-box;
     }
+    #resultsPanel h3 {
+      font-size: 1.5rem;
+      margin: 0 0 10px 0; /* 10px padding below title */
+      color: #013b5c;
+    }
+
+    /* Map */
     #mapWrapper { position: absolute; top: 60px; left: 350px; right: 0; bottom: 0; }
     #map { width: 100%; height: 100%; }
 
+    /* User cards */
     .user-card {
       display: flex; align-items: center; padding: 0.5rem; margin-bottom: 0.5rem;
       background: #fff; border-radius: 4px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.1);
       overflow: hidden;
     }
     .user-card:hover { background: rgba(0,150,205,0.15); }
+
     .user-circle {
       width: 60px; height: 60px; border-radius: 50%; background: #013b5c; border: 3px solid white;
       color: white; font-weight: bold; font-size: 22px; display: flex; align-items: center; justify-content: center; margin-right: 0.5rem; flex-shrink: 0;
@@ -61,29 +73,22 @@
     .user-name { font-weight: 500; }
     .user-company, .user-industry, .user-location { font-weight: normal; color: #666; }
 
-    .letter-marker {
-      background: #013b5c; border: 3px solid white; color: white; border-radius: 50%;
-      text-align: center; font-weight: bold; font-size: 16px; width: 40px; height: 40px; line-height: 34px;
+    /* Marker styles */
+    .letter-marker, .custom-cluster {
+      width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-weight: bold; color: white; text-align: center; font-size: 16px;
       transition: filter 0.2s;
+      border: 3px solid white;
     }
+    .letter-marker { background-color: #013b5c; }
+    .custom-cluster { background-color: #013b5c; }
 
-    .custom-cluster {
-      background-color: #013b5c; color: white; border: 3px solid white; border-radius: 50%;
-      text-align: center; font-weight: bold; line-height: 40px; font-size: 16px;
-      transition: filter 0.2s;
-    }
-
+    /* Autocomplete */
     .autocomplete-dropdown {
-      position: absolute; background: #fff; border: 1px solid #ccc; z-index: 9999; max-height: 150px; overflow-y: auto; font-family: 'Roboto', sans-serif; font-weight: bold;
+      position: absolute; background: #fff; border: 1px solid #ccc; z-index: 9999; max-height: 150px; overflow-y: auto; font-weight: bold;
     }
     .autocomplete-item { padding: 5px; cursor: pointer; }
     .autocomplete-item:hover { background: #eee; }
-
-    #resultsPanel h3 {
-      font-size: 1.5rem; /* 50% larger */
-      margin:0;
-      color: #013b5c;
-    }
 
     @media(max-width:768px){
       #resultsPanel { width: 100%; }
@@ -122,7 +127,7 @@ const sheetURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vSm2djr9eOyF8SI9
 let allData=[], markers=[], selectedMarker=null;
 
 const markerCluster = L.markerClusterGroup({
-  iconCreateFunction: cluster => L.divIcon({ html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`, className:'', iconSize:L.point(40,40) }),
+  iconCreateFunction: cluster => L.divIcon({ html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`, className:'', iconSize:[40,40], iconAnchor:[20,20] }),
   showCoverageOnHover: false
 });
 map.addLayer(markerCluster);
@@ -169,7 +174,6 @@ function updateMap(){
     let [lat,lng]=row['Geocode'].split(',').map(Number);
     lat=Math.round(lat*100)/100;
     lng=Math.round(lng*100)/100;
-
     if(isNaN(lat)||isNaN(lng)) return;
 
     const marker=L.marker([lat,lng],{icon:createLetterMarker(row)});
@@ -187,13 +191,10 @@ function getMarkerId(marker){ const d=marker.data; return `${d['First Name']}_${
 function highlightCard(marker,hover){
   const card=document.querySelector(`[data-marker-id="${getMarkerId(marker)}"]`);
   if(card) card.style.backgroundColor = hover ? 'rgba(0,150,205,0.15)' : 'transparent';
-  if(hover) {
-    const el=marker.getElement();
-    if(el) el.style.filter='drop-shadow(0 0 12px #00f)';
-  } else {
-    const el=marker.getElement();
-    if(el) el.style.filter='';
-  }
+
+  // glow for both single and cluster markers
+  const el=marker.getElement?.() || marker._icon || marker; 
+  if(el) el.style.filter = hover ? 'drop-shadow(0 0 8px #00f)' : '';
 }
 
 function updateVisibleUsers(){
