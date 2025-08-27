@@ -26,157 +26,136 @@
     /* Top Panel */
     #topPanel {
       position: fixed; top: 0; left: 0; right: 0; height: 60px;
-      background: #f5f5f5; display: flex; align-items: center;
+      background: #ffffff; display: flex; align-items: center;
       padding: 0 15px; gap: 1rem; z-index: 1000;
       box-sizing: border-box; border-bottom: 1px solid #ccc;
       box-shadow: 0 2px 4px rgba(0,0,0,0.08);
       overflow-x: auto; white-space: nowrap;
     }
-    #topPanel input, #topPanel select {
-      height: 36px; font-size: 14px; padding: 0 0.5rem;
-      border-radius: 4px; border: 1px solid #ccc;
-      font-family: 'Roboto', sans-serif; background: #fff; color: #333;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    #topPanel input, #topPanel select, #clearFilters {
+      font-weight: bold;
     }
-    #topPanel input { min-width: 200px; width: 800px; max-width: 100%; }
-    #topPanel select { min-width: 180px; padding-right: 30px; }
+    #topPanel input {
+      height: 36px; font-size: 14px; padding-left:28px; padding-right:0.5rem;
+      border-radius: 4px; border: 1px solid #ccc; background: #fff; color: #333;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      min-width: 200px; width: 400px; max-width: 100%;
+    }
+    #topPanel select {
+      height: 36px; font-size: 14px; padding: 0 0.5rem; padding-right:30px;
+      border-radius:4px; border:1px solid #ccc; background:#f7f9fb; color:#333;
+      min-width:180px;
+    }
     #clearFilters {
-      height: 36px; padding: 0 12px;
-      border: 1px solid #ccc; border-radius: 4px;
-      background: #fff; color: #333; cursor: pointer;
-      font-size: 14px; font-weight: 500;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      height:36px; padding:0 12px;
+      border-radius:4px; border:none; background:#66889e; color:white; cursor:pointer;
+      font-size:14px; font-weight:bold;
     }
-    #clearFilters:hover { background: #eee; }
+    #clearFilters:hover{background:#577684;}
+
+    /* Icons inside search bars */
+    .search-wrapper { position:relative; display:inline-block; }
+    .search-wrapper svg { position:absolute; left:8px; top:50%; transform:translateY(-50%); width:16px; height:16px; fill:#666; pointer-events:none; }
 
     /* Autocomplete dropdowns */
     .autocomplete-list {
-      position: absolute; background: #fff; border: 1px solid #ccc;
-      border-radius: 4px; max-height: 160px; overflow-y: auto;
-      z-index: 1100; box-shadow: 0 1px 3px rgba(0,0,0,0.15); font-size: 14px;
-      width: auto;
+      position: absolute; top: 100%; left: 0; right: 0;
+      background: #fff; border:1px solid #ccc; border-radius:4px;
+      max-height:160px; overflow-y:auto; z-index:2000; font-size:14px;
     }
-    .autocomplete-item {
-      padding: 6px 8px; cursor: pointer;
-    }
-    .autocomplete-item:hover { background: #f0f0f0; }
+    .autocomplete-item { padding:6px 8px; cursor:pointer; }
+    .autocomplete-item:hover { background:#f0f0f0; }
 
     /* Sidebar */
     #resultsPanel {
       position: fixed; top: 60px; left: 0; width: 350px; bottom: 0;
-      overflow-y: auto; background: #f5f5f5; color: #333;
-      padding: 0.5rem 1rem 1rem 1rem; font-size: 0.9rem; z-index: 1000;
-      box-sizing: border-box; border-right: 1px solid #ccc;
-      box-shadow: 2px 0 4px rgba(0,0,0,0.08);
-      display: flex; flex-direction: column;
+      overflow-y: auto; background:#f7f9fb; color: #333;
+      padding:0.5rem 1rem; font-size:0.9rem; z-index:1000; box-sizing:border-box;
+      border-right:1px solid #ccc; box-shadow:2px 0 4px rgba(0,0,0,0.08);
+      display:flex; flex-direction:column;
     }
-    #sidebarHeader {
-      text-align: center; margin-bottom: 0.5rem;
-    }
-    #sidebarHeader h3 { margin: 0; font-size: 1.2rem; }
-    #showMapWrapper { margin-top: 0.5rem; display:flex; justify-content:center; align-items:center; gap:0.5rem; }
+    #sidebarHeader { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; }
+    #sidebarHeader h3 { margin:0; font-size:1.5rem; color:#013b5c; }
+    .switch { position: relative; display: inline-block; width:40px; height:20px; }
+    .switch input { opacity:0; width:0; height:0; }
+    .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#ccc; transition:.4s; border-radius:20px; }
+    .slider:before { position:absolute; content:""; height:16px; width:16px; left:2px; bottom:2px; background-color:white; transition:.4s; border-radius:50%; }
+    input:checked + .slider { background-color:#2196F3; }
+    input:checked + .slider:before { transform:translateX(20px); }
 
-    #nearbyList { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-start; }
+    #nearbyList { display:flex; flex-wrap: wrap; gap:0.5rem; justify-content:flex-start; padding:0; margin:0; }
 
-    #mapWrapper { position: absolute; top: 60px; left: 350px; right: 0; bottom: 0; transition: all 0.3s ease; }
-    #map { width: 100%; height: 100%; }
+    #mapWrapper { position:absolute; top:60px; left:350px; right:0; bottom:0; transition:all 0.3s ease; }
+    #map { width:100%; height:100%; }
 
     /* User Cards */
-    .user-card {
-      display: flex; align-items: center; padding: 0.6rem; background: #fff;
-      border-radius: 6px; cursor: pointer; transition: all 0.2s ease;
-      width: 250px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
-    .user-card:hover { background: #f1f1f1; }
-    .user-circle {
-      width: 60px; height: 60px; border-radius: 50%; background: #013b5c; border: 3px solid white;
-      color: white; font-weight: bold; font-size: 20px;
-      display: flex; align-items: center; justify-content: center;
-      margin-right: 0.75rem; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .user-info { display: flex; flex-direction: column; }
-    .user-name { font-weight: 500; font-size: 1rem; margin-bottom: 0.1rem; }
-    .user-company { font-size: 0.85rem; color: #444; }
-    .user-industry { font-size: 0.8rem; color: #666; }
-    .user-location { font-size: 0.8rem; color: #666; }
+    .user-card { display:flex; align-items:center; padding:0.6rem; background:#fff;
+      border-radius:6px; cursor:pointer; transition:all 0.2s ease;
+      width:250px; box-shadow:0 1px 2px rgba(0,0,0,0.05); margin:0; }
+    .user-card:hover { background:#f1f1f1; }
+    .user-circle { width:60px; height:60px; border-radius:50%; background:#013b5c; border:3px solid white;
+      color:white; font-weight:bold; font-size:20px; display:flex; align-items:center; justify-content:center; margin-right:0.75rem; flex-shrink:0; box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+    .user-info { display:flex; flex-direction:column; }
+    .user-name { font-weight:500; font-size:1rem; margin-bottom:0.1rem; }
+    .user-company { font-size:0.85rem; color:#444; }
+    .user-industry { font-size:0.8rem; color:#666; }
+    .user-location { font-size:0.8rem; color:#666; }
 
     /* Markers */
-    .letter-marker {
-      background: #013b5c; border: 3px solid white; color: white;
-      border-radius: 50%; font-weight: bold;
-      font-size: 16px; width: 40px; height: 40px;
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-      background-clip: padding-box;
-    }
-    .pulse {
-      animation: pulseAnim 0.6s ease-in-out 2;
-    }
-    @keyframes pulseAnim {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.4); }
-      100% { transform: scale(1); }
-    }
+    .letter-marker { background:#013b5c; border:3px solid white; border-radius:50%;
+      width:40px; height:40px; display:flex; align-items:center; justify-content:center;
+      color:white; font-weight:bold; font-size:16px; box-shadow:0 1px 3px rgba(0,0,0,0.25); background-clip: padding-box; }
+    .pulse { animation:pulseAnim 0.6s ease-in-out 2; }
+    @keyframes pulseAnim {0%{transform:scale(1);}50%{transform:scale(1.4);}100%{transform:scale(1);}}
 
     /* Cluster markers */
-    .custom-cluster {
-      background-color: #013b5c; color: white; border: 3px solid white;
-      border-radius: 50%; font-weight: bold; font-size: 16px;
-      width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-    }
+    .custom-cluster { background-color:#013b5c; color:white; border:3px solid white; border-radius:50%;
+      font-weight:bold; font-size:16px; width:40px; height:40px; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 1px 3px rgba(0,0,0,0.25); }
 
     /* Responsive */
-    @media (max-width: 768px){
-      #resultsPanel { width: 100%; height: auto; top: 60px; position: relative; }
-      #mapWrapper { top: calc(60px + 0px); left: 0; height: 400px; }
-      #nearbyList { justify-content: center; }
-    }
+    @media(max-width:768px){#resultsPanel{width:100%;height:auto;top:60px;position:relative;}#mapWrapper{top:calc(60px+0px);left:0;height:400px;}#nearbyList{justify-content:center;}}
   </style>
 </head>
 <body>
 
 <div id="topPanel">
-  <input type="text" id="searchInput" placeholder="Search by Name">
-  <div style="position:relative; flex:1">
+  <div class="search-wrapper">
+    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M9.5 3A6.5 6.5 0 109.5 16a6.5 6.5 0 000-13zm0 11a4.5 4.5 0 110-9 4.5 4.5 0 010 9zm10 8l-5-5"/></svg>
+    <input type="text" id="searchInput" placeholder="Search by Name">
+    <div id="nameAutocomplete" class="autocomplete-list"></div>
+  </div>
+  <div class="search-wrapper">
+    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 3.87 3.13 7 7 7 3.87 0 7-3.13 7-7 0-3.87-3.13-7-7-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
     <input type="text" id="locationInput" placeholder="Search by Location">
     <div id="locationAutocomplete" class="autocomplete-list"></div>
   </div>
   <select id="countryFilter"><option value="">All Countries</option></select>
   <select id="industryFilter"><option value="">All Industries</option></select>
   <button id="clearFilters">Clear All Filters</button>
-  <div id="nameAutocomplete" class="autocomplete-list"></div>
 </div>
 
 <div id="resultsPanel">
   <div id="sidebarHeader">
     <h3>Users</h3>
-    <div id="showMapWrapper">
-      <input type="radio" id="showMapToggle" name="mapToggle" checked>
-      <label for="showMapToggle">Show Map</label>
-    </div>
+    <label class="switch">
+      <input type="checkbox" id="showMapToggle" checked>
+      <span class="slider round"></span>
+    </label>
   </div>
   <div id="nearbyList">Click a marker to see users.</div>
 </div>
 
-<div id="mapWrapper">
-  <div id="map"></div>
-</div>
+<div id="mapWrapper"><div id="map"></div></div>
 
 <script>
-const map = L.map('map', { zoomControl:true }).setView([54,-98], 4.5);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors' }).addTo(map);
+const map = L.map('map',{zoomControl:true}).setView([54,-98],4.5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
 
 const sheetURL='https://docs.google.com/spreadsheets/d/17h6qtv7Kw3ejYyK0hv7XyTUQ1y7KP3wj_w-pG4yNfkM/export?format=csv&gid=1454020769';
 let allData=[], markers=[], selectedMarker=null;
 
-const markerCluster = L.markerClusterGroup({
-  showCoverageOnHover:false,
-  iconCreateFunction: cluster => L.divIcon({
-    html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`,
-    className:'', iconSize:[40,40], iconAnchor:[20,20]
-  })
-});
+const markerCluster = L.markerClusterGroup({iconCreateFunction: cluster => L.divIcon({ html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`, className:'', iconSize:L.point(40,40) })});
 map.addLayer(markerCluster);
 
 const nameInput = document.getElementById('searchInput');
@@ -189,19 +168,12 @@ fetch(sheetURL).then(r=>r.text()).then(csv=>{
   allData = parsed.data;
 
   const countrySet=new Set(), industrySet=new Set();
-  allData.forEach(r=>{
-    if(r['Country']) countrySet.add(r['Country']);
-    if(r['Industry']) industrySet.add(r['Industry']);
-  });
+  allData.forEach(r=>{ if(r['Country']) countrySet.add(r['Country']); if(r['Industry']) industrySet.add(r['Industry']); });
 
   const countrySelect=document.getElementById('countryFilter');
-  Array.from(countrySet).sort().forEach(c=>{
-    const o=document.createElement('option'); o.value=c; o.textContent=c; countrySelect.appendChild(o);
-  });
+  Array.from(countrySet).sort().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; countrySelect.appendChild(o); });
   const industrySelect=document.getElementById('industryFilter');
-  Array.from(industrySet).sort().forEach(ind=>{
-    const o=document.createElement('option'); o.value=ind; o.textContent=ind; industrySelect.appendChild(o);
-  });
+  Array.from(industrySet).sort().forEach(i=>{ const o=document.createElement('option'); o.value=i; o.textContent=i; industrySelect.appendChild(o); });
 
   updateMap();
   countrySelect.addEventListener('change',updateMap);
@@ -211,7 +183,7 @@ fetch(sheetURL).then(r=>r.text()).then(csv=>{
   map.on('moveend', updateVisibleUsers);
 });
 
-// Utility: Round coords to 3 decimals
+// Utility: round coords to 3 decimals
 function roundCoord(num){ return parseFloat(num.toFixed(3)); }
 
 // Marker creation
@@ -236,11 +208,9 @@ function updateMap(){
     if(!row['Geocode']||!row['Geocode'].includes(',')) return;
     let [lat,lng]=row['Geocode'].split(',').map(Number);
     if(isNaN(lat)||isNaN(lng)) return;
-
     lat = roundCoord(lat); lng = roundCoord(lng);
-
-    const marker = L.marker([lat,lng], {icon:createLetterMarker(row)});
-    marker.data = row;
+    const marker=L.marker([lat,lng],{icon:createLetterMarker(row)});
+    marker.data=row;
     marker.on('mouseover',()=>highlightCard(marker,true));
     marker.on('mouseout',()=>highlightCard(marker,false));
     markers.push(marker);
@@ -258,7 +228,7 @@ function updateMap(){
 // Get marker ID
 function getMarkerId(marker){ const d=marker.data; return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_'); }
 
-// Highlight user card
+// Highlight card
 function highlightCard(marker,hover){
   const card=document.querySelector(`[data-marker-id="${getMarkerId(marker)}"]`);
   if(card) card.style.backgroundColor = hover ? 'rgba(0,128,255,0.15)' : '#fff';
@@ -278,10 +248,10 @@ function updateVisibleUsers(){
         <div class="user-name">${marker.data['First Name']} ${marker.data['Last Name']}</div>
         <div class="user-company">${marker.data['Business Name']||''}</div>
         <div class="user-industry">${marker.data['Industry']||''}</div>
-        <div class="user-location">${marker.data['City']||''}${marker.data['State/Province']? ', ' + marker.data['State/Province'] : ''}</div>
+        <div class="user-location">${marker.data['City']||''}${marker.data['State/Province']? ', '+marker.data['State/Province']:''}</div>
       </div>`;
     div.addEventListener('click', ()=>{
-      map.setView(marker.getLatLng(), 8);
+      map.setView(marker.getLatLng(),8);
       highlightMarker(marker);
     });
     listDiv.appendChild(div);
@@ -341,6 +311,5 @@ document.getElementById('showMapToggle').addEventListener('change', (e)=>{
   updateVisibleUsers();
 });
 </script>
-
 </body>
 </html>
