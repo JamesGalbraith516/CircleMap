@@ -71,9 +71,12 @@
       display: flex; flex-direction: column;
     }
     #sidebarHeader {
-      display:flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;
+      text-align: center; margin-bottom: 0.5rem;
     }
-    #nearbyList { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    #sidebarHeader h3 { margin: 0; font-size: 1.2rem; }
+    #showMapWrapper { margin-top: 0.5rem; display:flex; justify-content:center; align-items:center; gap:0.5rem; }
+
+    #nearbyList { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-start; }
 
     #mapWrapper { position: absolute; top: 60px; left: 350px; right: 0; bottom: 0; transition: all 0.3s ease; }
     #map { width: 100%; height: 100%; }
@@ -106,6 +109,14 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.25);
       background-clip: padding-box;
     }
+    .pulse {
+      animation: pulseAnim 0.6s ease-in-out 2;
+    }
+    @keyframes pulseAnim {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.4); }
+      100% { transform: scale(1); }
+    }
 
     /* Cluster markers */
     .custom-cluster {
@@ -113,6 +124,13 @@
       border-radius: 50%; font-weight: bold; font-size: 16px;
       width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
       box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px){
+      #resultsPanel { width: 100%; height: auto; top: 60px; position: relative; }
+      #mapWrapper { top: calc(60px + 0px); left: 0; height: 400px; }
+      #nearbyList { justify-content: center; }
     }
   </style>
 </head>
@@ -133,10 +151,10 @@
 <div id="resultsPanel">
   <div id="sidebarHeader">
     <h3>Users</h3>
-    <label style="display:flex; align-items:center; font-size:0.85rem; gap:0.3rem;">
-      Show Map
-      <input type="checkbox" id="showMapToggle" checked>
-    </label>
+    <div id="showMapWrapper">
+      <input type="radio" id="showMapToggle" name="mapToggle" checked>
+      <label for="showMapToggle">Show Map</label>
+    </div>
   </div>
   <div id="nearbyList">Click a marker to see users.</div>
 </div>
@@ -185,36 +203,30 @@ fetch(sheetURL).then(r=>r.text()).then(csv=>{
     const o=document.createElement('option'); o.value=ind; o.textContent=ind; industrySelect.appendChild(o);
   });
 
-  function resetFilters(){
-    nameInput.value=''; locationInput.value=''; countrySelect.value=''; industrySelect.value='';
-    updateMap();
-  }
-  document.getElementById('clearFilters').addEventListener('click', resetFilters);
-
   updateMap();
-
-  nameInput.addEventListener('input',()=>autocompleteSearch(nameInput,'name'));
-  locationInput.addEventListener('input',()=>autocompleteSearch(locationInput,'location'));
-  countrySelect.addEventListener('change', updateMap);
-  industrySelect.addEventListener('change', updateMap);
+  countrySelect.addEventListener('change',updateMap);
+  industrySelect.addEventListener('change',updateMap);
+  nameInput.addEventListener('input',()=>autocomplete(nameInput,nameAutocomplete,'name'));
+  locationInput.addEventListener('input',()=>autocomplete(locationInput,locationAutocomplete,'location'));
   map.on('moveend', updateVisibleUsers);
 });
 
-// Marker icon
+// Utility: Round coords to 3 decimals
+function roundCoord(num){ return parseFloat(num.toFixed(3)); }
+
+// Marker creation
 function createLetterMarker(user){
   const firstLetter = user['First Name'] ? user['First Name'][0].toUpperCase() : '?';
-  return L.divIcon({
-    html:`<div class="letter-marker">${firstLetter}</div>`,
-    iconSize:[40,40], iconAnchor:[20,20], className:''
-  });
+  return L.divIcon({ html:`<div class="letter-marker">${firstLetter}</div>`, iconSize:[40,40], iconAnchor:[20,20] });
 }
 
+// Update markers
 function updateMap(){
   markerCluster.clearLayers(); markers=[]; selectedMarker=null;
   const countryF=document.getElementById('countryFilter').value.toLowerCase();
   const industryF=document.getElementById('industryFilter').value.toLowerCase();
-  const nameF=document.getElementById('searchInput').value.toLowerCase();
-  const locF=document.getElementById('locationInput').value.toLowerCase();
+  const nameF=nameInput.value.toLowerCase();
+  const locF=locationInput.value.toLowerCase();
 
   allData.forEach(row=>{
     if(countryF && row['Country']?.toLowerCase()!==countryF) return;
@@ -222,29 +234,37 @@ function updateMap(){
     if(nameF && !(`${row['First Name']} ${row['Last Name']}`.toLowerCase().includes(nameF))) return;
     if(locF && row['City'] && !row['City'].toLowerCase().includes(locF)) return;
     if(!row['Geocode']||!row['Geocode'].includes(',')) return;
-    const [lat,lng]=row['Geocode'].split(',').map(Number);
+    let [lat,lng]=row['Geocode'].split(',').map(Number);
     if(isNaN(lat)||isNaN(lng)) return;
 
-    const marker=L.marker([lat,lng],{icon:createLetterMarker(row)});
-    marker.data=row;
+    lat = roundCoord(lat); lng = roundCoord(lng);
+
+    const marker = L.marker([lat,lng], {icon:createLetterMarker(row)});
+    marker.data = row;
     marker.on('mouseover',()=>highlightCard(marker,true));
     marker.on('mouseout',()=>highlightCard(marker,false));
     markers.push(marker);
     markerCluster.addLayer(marker);
   });
+
+  // Click cluster zoom
+  markerCluster.on('clusterclick', cluster=>{
+    map.fitBounds(cluster.layer.getBounds());
+  });
+
   updateVisibleUsers();
 }
 
-function getMarkerId(marker){
-  const d=marker.data;
-  return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_');
-}
+// Get marker ID
+function getMarkerId(marker){ const d=marker.data; return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_'); }
 
+// Highlight user card
 function highlightCard(marker,hover){
   const card=document.querySelector(`[data-marker-id="${getMarkerId(marker)}"]`);
-  if(card) card.style.backgroundColor = hover ? '#e9f5ff' : '#fff';
+  if(card) card.style.backgroundColor = hover ? 'rgba(0,128,255,0.15)' : '#fff';
 }
 
+// Update sidebar users
 function updateVisibleUsers(){
   const bounds=map.getBounds();
   const listDiv=document.getElementById('nearbyList'); listDiv.innerHTML='';
@@ -252,71 +272,75 @@ function updateVisibleUsers(){
   if(!visible.length){ listDiv.textContent='No users visible on map.'; return; }
 
   visible.forEach(marker=>{
-    const d=marker.data;
     const div=document.createElement('div'); div.className='user-card'; div.dataset.markerId=getMarkerId(marker);
-    div.innerHTML=`<div class="user-circle">${d['First Name']?.[0].toUpperCase()||'?'}</div>
+    div.innerHTML=`<div class="user-circle">${marker.data['First Name']?.[0].toUpperCase()||'?'}</div>
       <div class="user-info">
-        <div class="user-name">${d['First Name']} ${d['Last Name']}</div>
-        <div class="user-company">${d['Business Name']||''}</div>
-        <div class="user-industry">${d['Industry']||''}</div>
-        <div class="user-location">${d['City']||''}${d['State/Province']?', '+d['State/Province']:''}</div>
+        <div class="user-name">${marker.data['First Name']} ${marker.data['Last Name']}</div>
+        <div class="user-company">${marker.data['Business Name']||''}</div>
+        <div class="user-industry">${marker.data['Industry']||''}</div>
+        <div class="user-location">${marker.data['City']||''}${marker.data['State/Province']? ', ' + marker.data['State/Province'] : ''}</div>
       </div>`;
-
-    // Click → center & highlight marker
-    div.addEventListener('click',()=>{
-      const latlng = marker.getLatLng();
-      map.setView(latlng,10,{animate:true});
-      marker.getElement().style.filter='drop-shadow(0 0 12px #00f)';
-      setTimeout(()=>marker.getElement().style.filter='none',2000);
+    div.addEventListener('click', ()=>{
+      map.setView(marker.getLatLng(), 8);
+      highlightMarker(marker);
     });
-
-    div.addEventListener('mouseenter',()=>marker.getElement().style.filter='drop-shadow(0 0 12px #00f)');
-    div.addEventListener('mouseleave',()=>marker.getElement().style.filter='none');
     listDiv.appendChild(div);
   });
 }
 
-// Autocomplete
-function autocompleteSearch(input, type){
-  const val = input.value.toLowerCase();
-  const listEl = type==='name'?nameAutocomplete:locationAutocomplete;
-  listEl.innerHTML='';
-  listEl.style.display=val? 'block':'none';
-  const results = [];
-  for(const row of allData){
-    let text = type==='name'?`${row['First Name']} ${row['Last Name']}`:`${row['City']||''}${row['State/Province']? ', '+row['State/Province']:''}`;
-    if(text.toLowerCase().includes(val)) results.push({text,row});
-    if(results.length>=5) break;
-  }
-  results.forEach(r=>{
-    const item = document.createElement('div');
-    item.className='autocomplete-item';
-    item.textContent=r.text;
-    item.addEventListener('click',()=>{
-      input.value=r.text;
-      listEl.style.display='none';
-      map.setView(r.row['Geocode'].split(',').map(Number),10);
-    });
-    listEl.appendChild(item);
-  });
+// Highlight marker with pulse
+function highlightMarker(marker){
+  if(selectedMarker) selectedMarker.getElement()?.classList.remove('pulse');
+  if(selectedMarker && selectedMarker !== marker) highlightCard(selectedMarker,false);
+  selectedMarker = marker;
+  highlightCard(marker,true);
+  const el = marker.getElement();
+  if(el){ el.classList.add('pulse'); setTimeout(()=>el.classList.remove('pulse'), 1200); }
 }
 
-// Show Map Toggle
-document.getElementById('showMapToggle').addEventListener('change', e=>{
-  const showMap = e.target.checked;
-  const mapWrapper = document.getElementById('mapWrapper');
-  const sidebar = document.getElementById('resultsPanel');
-  if(showMap){
-    mapWrapper.style.display='block';
-    sidebar.style.width='350px';
-    sidebar.style.flexWrap='nowrap';
-    map.invalidateSize();
-  }else{
-    mapWrapper.style.display='none';
-    sidebar.style.width='100%';
-    sidebar.style.flexWrap='wrap';
-  }
+// Autocomplete
+function autocomplete(input, container, type){
+  const val = input.value.toLowerCase();
+  container.innerHTML=''; if(!val){ container.style.display='none'; return; }
+  const results = allData.filter(r=>{
+    if(type==='name') return `${r['First Name']} ${r['Last Name']}`.toLowerCase().includes(val);
+    if(type==='location') return r['City']?.toLowerCase().includes(val);
+    return false;
+  }).slice(0,5);
+  results.forEach(r=>{
+    const div=document.createElement('div'); div.className='autocomplete-item';
+    div.textContent = type==='name' ? `${r['First Name']} ${r['Last Name']}` : r['City'];
+    div.addEventListener('click', ()=>{
+      if(type==='name'){ input.value=`${r['First Name']} ${r['Last Name']}`; }
+      else { input.value=r['City']; }
+      container.style.display='none';
+      map.setView([roundCoord(parseFloat(r['Geocode'].split(',')[0])), roundCoord(parseFloat(r['Geocode'].split(',')[1]))], 8);
+    });
+    container.appendChild(div);
+  });
+  container.style.display = results.length ? 'block' : 'none';
+}
+
+// Close autocomplete when clicking outside
+document.addEventListener('click', (e)=>{
+  if(!nameInput.contains(e.target)) nameAutocomplete.style.display='none';
+  if(!locationInput.contains(e.target)) locationAutocomplete.style.display='none';
+});
+
+// Clear filters
+document.getElementById('clearFilters').addEventListener('click', ()=>{
+  nameInput.value=''; locationInput.value=''; document.getElementById('countryFilter').value=''; document.getElementById('industryFilter').value='';
+  updateMap();
+});
+
+// Show Map toggle
+document.getElementById('showMapToggle').addEventListener('change', (e)=>{
+  const checked = e.target.checked;
+  document.getElementById('mapWrapper').style.display = checked ? 'block' : 'none';
+  document.getElementById('resultsPanel').style.width = checked ? '350px' : '100%';
+  updateVisibleUsers();
 });
 </script>
+
 </body>
 </html>
