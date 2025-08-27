@@ -25,14 +25,14 @@ html,body{height:100%;margin:0;font-family:'Roboto',sans-serif;}
 #clearFilters:hover{background:#577684;}
 .search-wrapper{position:relative;display:inline-block;}
 .search-wrapper svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:16px;height:16px;fill:#666;pointer-events:none;}
-.autocomplete-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:160px;overflow-y:auto;z-index:2000;font-size:14px;}
+.autocomplete-list{position:absolute;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:160px;overflow-y:auto;z-index:9999;font-size:14px;box-shadow:0 2px 5px rgba(0,0,0,0.15);}
 .autocomplete-item{padding:6px 8px;cursor:pointer;}
 .autocomplete-item:hover{background:#f0f0f0;}
 
 #resultsPanel{position:fixed;top:60px;left:0;width:350px;bottom:0;overflow-y:auto;background:#f7f9fb;color:#333;padding:0.75rem 0.5rem;font-size:0.9rem;z-index:1000;box-sizing:border-box;border-right:1px solid #ccc;box-shadow:2px 0 4px rgba(0,0,0,0.08);display:flex;flex-direction:column;}
-#sidebarHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;position:relative;}
-#sidebarHeader h3{margin:0;font-size:1.5rem;color:#013b5c;}
-.switch-wrapper{display:flex;align-items:center;position:absolute;right:0;}
+#sidebarHeader{display:flex;align-items:center;margin-bottom:0.5rem;justify-content:space-between;}
+#sidebarHeader h3{margin:0;font-size:1.5rem;color:#013b5c;margin-right:10px;}
+.switch-wrapper{display:flex;align-items:center;}
 .switch-wrapper label{margin-right:8px;font-weight:bold;color:#013b5c;}
 .switch{position:relative;display:inline-block;width:40px;height:20px;}
 .switch input{opacity:0;width:0;height:0;}
@@ -87,43 +87,42 @@ input:checked + .slider:before{transform:translateX(20px);}
     <h3>Users</h3>
     <div class="switch-wrapper">
       <label for="toggleMap">Show Map</label>
-      <label class="switch"><input type="checkbox" id="toggleMap" checked><span class="slider round"></span></label>
+      <label class="switch"><input type="checkbox" id="toggleMap" checked><span class="slider"></span></label>
     </div>
   </div>
   <div id="nearbyList">Click a marker to see users.</div>
 </div>
 
-<div id="mapWrapper"><div id="map"></div></div>
+<div id="mapWrapper">
+  <div id="map"></div>
+</div>
 
 <script>
-const map = L.map('map', { zoomControl:true }).setView([54,-98], 4.5);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors' }).addTo(map);
+const map = L.map('map',{zoomControl:true}).setView([54,-98],4.5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
 
 const sheetURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vSm2djr9eOyF8SI92KcfrCsrFEcW3dmaStUT4H0Ard8A1BUKKgd08owmHvG6TT7AdfPXB26pJ-Stzjw/pub?gid=528897676&single=true&output=csv';
 let allData=[], markers=[], selectedMarker=null;
 
-const markerCluster = L.markerClusterGroup({
-  iconCreateFunction: cluster => L.divIcon({ html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`, className:'', iconSize:L.point(40,40) }),
-  showCoverageOnHover:false
-});
+const markerCluster = L.markerClusterGroup({iconCreateFunction: cluster=>L.divIcon({html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`,className:'',iconSize:L.point(40,40)}),showCoverageOnHover:false});
 map.addLayer(markerCluster);
 
-const nameInput = document.getElementById('searchInput');
-const locInput = document.getElementById('locationInput');
-const nameAuto = document.getElementById('nameAutocomplete');
-const locAuto = document.getElementById('locationAutocomplete');
+const nameInput=document.getElementById('searchInput');
+const locInput=document.getElementById('locationInput');
+const nameAuto=document.getElementById('nameAutocomplete');
+const locAuto=document.getElementById('locationAutocomplete');
 
 fetch(sheetURL).then(r=>r.text()).then(csv=>{
-  const parsed = Papa.parse(csv,{header:true, skipEmptyLines:true});
-  allData = parsed.data;
+  const parsed=Papa.parse(csv,{header:true,skipEmptyLines:true});
+  allData=parsed.data;
 
   const industrySet=new Set(), countrySet=new Set();
-  allData.forEach(r=>{ if(r['Industry']) industrySet.add(r['Industry']); if(r['Country']) countrySet.add(r['Country']); });
+  allData.forEach(r=>{if(r['Industry'])industrySet.add(r['Industry']);if(r['Country'])countrySet.add(r['Country']);});
 
   const industrySelect=document.getElementById('industryFilter');
-  Array.from(industrySet).sort().forEach(ind=>{ const o=document.createElement('option'); o.value=ind; o.textContent=ind; industrySelect.appendChild(o); });
+  Array.from(industrySet).sort().forEach(ind=>{const o=document.createElement('option');o.value=ind;o.textContent=ind;industrySelect.appendChild(o);});
   const countrySelect=document.getElementById('countryFilter');
-  Array.from(countrySet).sort().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; countrySelect.appendChild(o); });
+  Array.from(countrySet).sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;countrySelect.appendChild(o);});
 
   updateMap();
   industrySelect.addEventListener('change',updateMap);
@@ -135,8 +134,8 @@ fetch(sheetURL).then(r=>r.text()).then(csv=>{
 });
 
 function createLetterMarker(user){
-  const firstLetter = user['First Name'] ? user['First Name'][0].toUpperCase() : '?';
-  return L.divIcon({ html:`<div class="letter-marker">${firstLetter}</div>`, iconSize:[40,40], iconAnchor:[20,20] });
+  const firstLetter=user['First Name']?user['First Name'][0].toUpperCase():'?';
+  return L.divIcon({html:`<div class="letter-marker">${firstLetter}</div>`,iconSize:[40,40],iconAnchor:[20,20]});
 }
 
 function updateMap(){
@@ -145,11 +144,11 @@ function updateMap(){
   const countryF=document.getElementById('countryFilter').value.toLowerCase();
 
   allData.forEach(row=>{
-    if(industryF && row['Industry']?.toLowerCase()!==industryF) return;
-    if(countryF && row['Country']?.toLowerCase()!==countryF) return;
-    if(!row['Geocode']||!row['Geocode'].includes(',')) return;
+    if(industryF && row['Industry']?.toLowerCase()!==industryF)return;
+    if(countryF && row['Country']?.toLowerCase()!==countryF)return;
+    if(!row['Geocode']||!row['Geocode'].includes(','))return;
     let [lat,lng]=row['Geocode'].split(',').map(Number);
-    if(isNaN(lat)||isNaN(lng)) return;
+    if(isNaN(lat)||isNaN(lng))return;
     lat=parseFloat(lat.toFixed(2)); lng=parseFloat(lng.toFixed(2));
 
     const marker=L.marker([lat,lng],{icon:createLetterMarker(row)});
@@ -166,23 +165,25 @@ function updateMap(){
 
 function pulseMarker(marker){
   const el=marker.getElement();
-  if(!el) return;
+  if(!el)return;
   el.classList.add('pulse');
   setTimeout(()=>el.classList.remove('pulse'),1200);
 }
 
-function getMarkerId(marker){ const d=marker.data; return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_'); }
+function getMarkerId(marker){const d=marker.data;return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_');}
 
 function highlightCard(marker,hover){
   const card=document.querySelector(`[data-marker-id="${getMarkerId(marker)}"]`);
-  if(card) card.style.backgroundColor = hover ? 'rgba(0,150,205,0.15)' : '#fff';
+  if(card)card.style.backgroundColor=hover?'rgba(0,150,205,0.15)':'#fff';
+  const el=marker.getElement();
+  if(el)el.style.filter=hover?'drop-shadow(0 0 12px #00f)':'drop-shadow(0 0 0 rgba(0,0,0,0))';
 }
 
 function updateVisibleUsers(){
   const bounds=map.getBounds();
   const listDiv=document.getElementById('nearbyList'); listDiv.innerHTML='';
   const visible=markers.filter(m=>bounds.contains(m.getLatLng()));
-  if(!visible.length){ listDiv.textContent='No users visible on map.'; return; }
+  if(!visible.length){listDiv.textContent='No users visible on map.';return;}
 
   visible.forEach(marker=>{
     const div=document.createElement('div'); div.className='user-card'; div.dataset.markerId=getMarkerId(marker);
@@ -193,8 +194,8 @@ function updateVisibleUsers(){
         <div class="user-industry">${marker.data['Industry']||''}</div>
         <div class="user-location">${marker.data['City']||''}, ${marker.data['State/Province']||''}, ${marker.data['Country']||''}</div>
       </div>`;
-    div.addEventListener('mouseenter',()=>marker.getElement().style.filter='drop-shadow(0 0 12px #00f)');
-    div.addEventListener('mouseleave',()=>marker.getElement().style.filter='drop-shadow(0 0 0 rgba(0,0,0,0))');
+    div.addEventListener('mouseenter',()=>highlightCard(marker,true));
+    div.addEventListener('mouseleave',()=>highlightCard(marker,false));
     div.addEventListener('click',()=>{map.setView(marker.getLatLng(),8); pulseMarker(marker);});
     listDiv.appendChild(div);
   });
@@ -209,21 +210,25 @@ function setupAutocomplete(){
 function setupInputAutocomplete(input,autoDiv,...fields){
   autoDiv.innerHTML='';
   input.addEventListener('input',()=>{
-    const val=input.value.toLowerCase().trim();
     autoDiv.innerHTML='';
-    if(!val) return;
-    const matches = allData.filter(r=>fields.some(f=>r[f]?.toLowerCase().includes(val)));
+    const val=input.value.toLowerCase().trim();
+    if(!val)return;
+    const matches=allData.filter(r=>fields.some(f=>r[f]?.toLowerCase().includes(val)));
     matches.slice(0,5).forEach(r=>{
       const div=document.createElement('div'); div.className='autocomplete-item';
-      div.textContent = fields.map(f=>r[f]).join(' ');
+      div.textContent=fields.map(f=>r[f]).join(' ');
       div.addEventListener('click',()=>{
-        const marker = markers.find(m=>getMarkerId(m)===getMarkerId({data:r}));
+        const marker=markers.find(m=>getMarkerId(m)===getMarkerId({data:r}));
         if(marker){map.setView(marker.getLatLng(),8); pulseMarker(marker); highlightCard(marker,true);}
-        input.value = fields.map(f=>r[f]).join(' ');
+        input.value=fields.map(f=>r[f]).join(' ');
         autoDiv.innerHTML='';
       });
       autoDiv.appendChild(div);
     });
+    const rect=input.getBoundingClientRect();
+    autoDiv.style.top=(rect.bottom+window.scrollY)+'px';
+    autoDiv.style.left=(rect.left+window.scrollX)+'px';
+    autoDiv.style.width=rect.width+'px';
   });
 }
 
