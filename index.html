@@ -23,7 +23,7 @@
   <style>
     html, body { height: 100%; margin: 0; font-family: 'Roboto', sans-serif; }
 
-    /* --- Top Panel --- */
+    /* Top Panel */
     #topPanel {
       position: fixed; top: 0; left: 0; right: 0; height: 60px;
       background: #f5f5f5; display: flex; align-items: center;
@@ -39,8 +39,7 @@
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     #topPanel input { min-width: 200px; width: 800px; max-width: 100%; }
-    #topPanel select { min-width: 180px; }
-
+    #topPanel select { min-width: 180px; padding-right: 30px; }
     #clearFilters {
       height: 36px; padding: 0 12px;
       border: 1px solid #ccc; border-radius: 4px;
@@ -50,7 +49,19 @@
     }
     #clearFilters:hover { background: #eee; }
 
-    /* --- Sidebar --- */
+    /* Autocomplete dropdowns */
+    .autocomplete-list {
+      position: absolute; background: #fff; border: 1px solid #ccc;
+      border-radius: 4px; max-height: 160px; overflow-y: auto;
+      z-index: 1100; box-shadow: 0 1px 3px rgba(0,0,0,0.15); font-size: 14px;
+      width: auto;
+    }
+    .autocomplete-item {
+      padding: 6px 8px; cursor: pointer;
+    }
+    .autocomplete-item:hover { background: #f0f0f0; }
+
+    /* Sidebar */
     #resultsPanel {
       position: fixed; top: 60px; left: 0; width: 350px; bottom: 0;
       overflow-y: auto; background: #f5f5f5; color: #333;
@@ -58,20 +69,18 @@
       box-sizing: border-box; border-right: 1px solid #ccc;
       box-shadow: 2px 0 4px rgba(0,0,0,0.08);
     }
-    #resultsPanel h3 {
-      margin-top: 0.5rem; margin-bottom: 0.75rem;
-    }
+    #resultsPanel h3 { margin-top: 0.5rem; margin-bottom: 0.75rem; }
+
     #mapWrapper { position: absolute; top: 60px; left: 350px; right: 0; bottom: 0; }
     #map { width: 100%; height: 100%; }
 
-    /* --- User Cards --- */
+    /* User Cards */
     .user-card {
       display: flex; align-items: center; padding: 0.6rem; margin-bottom: 0.6rem;
       background: #fff; border-radius: 6px; cursor: pointer;
       transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     .user-card:hover { background: #f1f1f1; }
-
     .user-circle {
       width: 60px; height: 60px; border-radius: 50%; background: #013b5c; border: 3px solid white;
       color: white; font-weight: bold; font-size: 20px;
@@ -84,17 +93,18 @@
     .user-industry { font-size: 0.8rem; color: #666; }
     .user-location { font-size: 0.8rem; color: #666; }
 
-    /* --- Markers --- */
+    /* Markers */
     .letter-marker {
       background: #013b5c; border: 3px solid white; color: white;
       border-radius: 50%; font-weight: bold;
       font-size: 16px; width: 40px; height: 40px;
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      background-clip: padding-box;
     }
     .letter-marker:hover { filter: drop-shadow(0 0 12px #00f); }
 
-    /* --- Clusters --- */
+    /* Cluster markers */
     .custom-cluster {
       background-color: #013b5c; color: white; border: 3px solid white;
       border-radius: 50%; font-weight: bold; font-size: 16px;
@@ -106,11 +116,15 @@
 <body>
 
 <div id="topPanel">
-  <input type="text" id="searchInput" placeholder="Search Name">
-  <input type="text" id="locationInput" placeholder="Search Location">
+  <input type="text" id="searchInput" placeholder="Search by Name">
+  <div style="position:relative; flex:1">
+    <input type="text" id="locationInput" placeholder="Search by Location">
+    <div id="locationAutocomplete" class="autocomplete-list"></div>
+  </div>
   <select id="countryFilter"><option value="">All Countries</option></select>
   <select id="industryFilter"><option value="">All Industries</option></select>
   <button id="clearFilters">Clear All Filters</button>
+  <div id="nameAutocomplete" class="autocomplete-list"></div>
 </div>
 
 <div id="resultsPanel">
@@ -123,7 +137,7 @@
 </div>
 
 <script>
-const map = L.map('map', { zoomControl:true }).setView([54,-98], 4.5); // US & Canada focus
+const map = L.map('map', { zoomControl:true }).setView([54,-98], 4.5);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors' }).addTo(map);
 
 const sheetURL='https://docs.google.com/spreadsheets/d/17h6qtv7Kw3ejYyK0hv7XyTUQ1y7KP3wj_w-pG4yNfkM/export?format=csv&gid=1454020769';
@@ -137,6 +151,11 @@ const markerCluster = L.markerClusterGroup({
   })
 });
 map.addLayer(markerCluster);
+
+const nameInput = document.getElementById('searchInput');
+const locationInput = document.getElementById('locationInput');
+const nameAutocomplete = document.getElementById('nameAutocomplete');
+const locationAutocomplete = document.getElementById('locationAutocomplete');
 
 fetch(sheetURL).then(r=>r.text()).then(csv=>{
   const parsed = Papa.parse(csv,{header:true, skipEmptyLines:true});
@@ -157,24 +176,28 @@ fetch(sheetURL).then(r=>r.text()).then(csv=>{
     const o=document.createElement('option'); o.value=ind; o.textContent=ind; industrySelect.appendChild(o);
   });
 
-  updateMap();
-  countrySelect.addEventListener('change',updateMap);
-  industrySelect.addEventListener('change',updateMap);
-  document.getElementById('searchInput').addEventListener('input',updateMap);
-  document.getElementById('locationInput').addEventListener('input',updateMap);
-  document.getElementById('clearFilters').addEventListener('click',()=>{
-    document.getElementById('searchInput').value='';
-    document.getElementById('locationInput').value='';
-    countrySelect.value='';
-    industrySelect.value='';
+  function resetFilters(){
+    nameInput.value=''; locationInput.value=''; countrySelect.value=''; industrySelect.value='';
     updateMap();
-  });
+  }
+  document.getElementById('clearFilters').addEventListener('click', resetFilters);
+
+  updateMap();
+
+  nameInput.addEventListener('input',()=>autocompleteSearch(nameInput,'name'));
+  locationInput.addEventListener('input',()=>autocompleteSearch(locationInput,'location'));
+  countrySelect.addEventListener('change', updateMap);
+  industrySelect.addEventListener('change', updateMap);
   map.on('moveend', updateVisibleUsers);
 });
 
+// Create marker icons
 function createLetterMarker(user){
   const firstLetter = user['First Name'] ? user['First Name'][0].toUpperCase() : '?';
-  return L.divIcon({ html:`<div class="letter-marker">${firstLetter}</div>`, iconSize:[40,40], iconAnchor:[20,20] });
+  return L.divIcon({
+    html:`<div class="letter-marker">${firstLetter}</div>`,
+    iconSize:[40,40], iconAnchor:[20,20], className:''
+  });
 }
 
 function updateMap(){
@@ -232,6 +255,31 @@ function updateVisibleUsers(){
     div.addEventListener('mouseenter',()=>marker.getElement().style.filter='drop-shadow(0 0 12px #00f)');
     div.addEventListener('mouseleave',()=>marker.getElement().style.filter='none');
     listDiv.appendChild(div);
+  });
+}
+
+// Autocomplete search
+function autocompleteSearch(input, type){
+  const val = input.value.toLowerCase();
+  const listEl = type==='name'?nameAutocomplete:locationAutocomplete;
+  listEl.innerHTML='';
+  listEl.style.display=val? 'block':'none';
+  const results = [];
+  for(const row of allData){
+    let text = type==='name'?`${row['First Name']} ${row['Last Name']}`:`${row['City']||''}${row['State/Province']? ', '+row['State/Province']:''}`;
+    if(text.toLowerCase().includes(val)) results.push({text,row});
+    if(results.length>=5) break;
+  }
+  results.forEach(r=>{
+    const item = document.createElement('div');
+    item.className='autocomplete-item';
+    item.textContent=r.text;
+    item.addEventListener('click',()=>{
+      input.value=r.text;
+      listEl.style.display='none';
+      map.setView(r.row['Geocode'].split(',').map(Number),10);
+    });
+    listEl.appendChild(item);
   });
 }
 </script>
