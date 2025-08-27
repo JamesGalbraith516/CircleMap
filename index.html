@@ -25,7 +25,7 @@ html,body{height:100%;margin:0;font-family:'Roboto',sans-serif;}
 #clearFilters:hover{background:#577684;}
 .search-wrapper{position:relative;display:inline-block;}
 .search-wrapper svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:16px;height:16px;fill:#666;pointer-events:none;}
-.autocomplete-list{position:absolute;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:160px;overflow-y:auto;z-index:9999;font-size:14px;box-shadow:0 2px 5px rgba(0,0,0,0.15);}
+.autocomplete-list{position:absolute;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:150px;overflow-y:auto;z-index:9999;font-size:14px;box-shadow:0 2px 5px rgba(0,0,0,0.15);}
 .autocomplete-item{padding:6px 8px;cursor:pointer;}
 .autocomplete-item:hover{background:#f0f0f0;}
 
@@ -51,7 +51,8 @@ input:checked + .slider:before{transform:translateX(20px);}
 .user-info{display:flex;flex-direction:column;}
 .user-name{font-weight:500;font-size:1rem;margin-bottom:0.1rem;}
 .user-company{font-size:0.85rem;color:#444;}
-.user-industry{font-size:0.8rem;color:#666;}
+.user-industry{font-size:0.8rem;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-industry:hover{cursor:help;}
 .user-location{font-size:0.8rem;color:#666;}
 
 .letter-marker{background:#013b5c !important;border:3px solid white;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:16px;box-shadow:0 1px 3px rgba(0,0,0,0.25);background-clip:padding-box;background-image:none !important;}
@@ -98,13 +99,13 @@ input:checked + .slider:before{transform:translateX(20px);}
 </div>
 
 <script>
-const map = L.map('map',{zoomControl:true}).setView([54,-98],4.5);
+const map=L.map('map',{zoomControl:true}).setView([54,-98],4.5);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
 
 const sheetURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vSm2djr9eOyF8SI92KcfrCsrFEcW3dmaStUT4H0Ard8A1BUKKgd08owmHvG6TT7AdfPXB26pJ-Stzjw/pub?gid=528897676&single=true&output=csv';
-let allData=[], markers=[], selectedMarker=null;
+let allData=[],markers=[],selectedMarker=null;
 
-const markerCluster = L.markerClusterGroup({iconCreateFunction: cluster=>L.divIcon({html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`,className:'',iconSize:L.point(40,40)}),showCoverageOnHover:false});
+const markerCluster=L.markerClusterGroup({iconCreateFunction:cluster=>L.divIcon({html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`,className:'',iconSize:L.point(40,40)}),showCoverageOnHover:false});
 map.addLayer(markerCluster);
 
 const nameInput=document.getElementById('searchInput');
@@ -130,7 +131,7 @@ fetch(sheetURL).then(r=>r.text()).then(csv=>{
   document.getElementById('clearFilters').addEventListener('click',()=>{
     nameInput.value=''; locInput.value=''; industrySelect.value=''; countrySelect.value=''; updateMap();
   });
-  map.on('moveend', updateVisibleUsers);
+  map.on('moveend',updateVisibleUsers);
 });
 
 function createLetterMarker(user){
@@ -164,10 +165,8 @@ function updateMap(){
 }
 
 function pulseMarker(marker){
-  const el=marker.getElement();
-  if(!el)return;
-  el.classList.add('pulse');
-  setTimeout(()=>el.classList.remove('pulse'),1200);
+  const el=marker.getElement(); if(!el)return;
+  el.classList.add('pulse'); setTimeout(()=>el.classList.remove('pulse'),1200);
 }
 
 function getMarkerId(marker){const d=marker.data;return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_');}
@@ -191,7 +190,7 @@ function updateVisibleUsers(){
       <div class="user-info">
         <div class="user-name">${marker.data['First Name']} ${marker.data['Last Name']}</div>
         <div class="user-company">${marker.data['Business Name']||''}</div>
-        <div class="user-industry">${marker.data['Industry']||''}</div>
+        <div class="user-industry" title="${marker.data['Industry']||''}">${marker.data['Industry']||''}</div>
         <div class="user-location">${marker.data['City']||''}, ${marker.data['State/Province']||''}, ${marker.data['Country']||''}</div>
       </div>`;
     div.addEventListener('mouseenter',()=>highlightCard(marker,true));
@@ -236,8 +235,9 @@ function setupInputAutocomplete(input,autoDiv,...fields){
 const toggleMap=document.getElementById('toggleMap');
 toggleMap.addEventListener('change',()=>{
   const mapWrapper=document.getElementById('mapWrapper');
-  if(toggleMap.checked){mapWrapper.style.display='block';document.getElementById('resultsPanel').style.width='350px';} 
-  else{mapWrapper.style.display='none';document.getElementById('resultsPanel').style.width='100%';}
+  const resultsPanel=document.getElementById('resultsPanel');
+  if(toggleMap.checked){mapWrapper.style.display='block';resultsPanel.style.width='350px';} 
+  else{mapWrapper.style.display='none';resultsPanel.style.width='100%';}
 });
 </script>
 </body>
