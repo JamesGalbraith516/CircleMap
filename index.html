@@ -26,8 +26,8 @@
     /* --- Top Panel --- */
     #topPanel {
       position: fixed; top: 0; left: 0; right: 0; height: 60px;
-      background: #fff; display: flex; align-items: center;
-      padding: 0 1rem; gap: 1rem; z-index: 1000;
+      background: #f5f5f5; display: flex; align-items: center;
+      padding: 0 15px; gap: 1rem; z-index: 1000;
       box-sizing: border-box; border-bottom: 1px solid #ccc;
       box-shadow: 0 2px 4px rgba(0,0,0,0.08);
       overflow-x: auto; white-space: nowrap;
@@ -41,21 +41,33 @@
     #topPanel input { min-width: 200px; width: 800px; max-width: 100%; }
     #topPanel select { min-width: 180px; }
 
+    #clearFilters {
+      height: 36px; padding: 0 12px;
+      border: 1px solid #ccc; border-radius: 4px;
+      background: #fff; color: #333; cursor: pointer;
+      font-size: 14px; font-weight: 500;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    #clearFilters:hover { background: #eee; }
+
     /* --- Sidebar --- */
     #resultsPanel {
-      position: fixed; top: 60px; left: 0; width: 300px; bottom: 0;
-      overflow-y: auto; background: #fff; color: #333;
-      padding: 1rem; font-size: 0.9rem; z-index: 1000;
+      position: fixed; top: 60px; left: 0; width: 350px; bottom: 0;
+      overflow-y: auto; background: #f5f5f5; color: #333;
+      padding: 0.5rem 1rem 1rem 1rem; font-size: 0.9rem; z-index: 1000;
       box-sizing: border-box; border-right: 1px solid #ccc;
       box-shadow: 2px 0 4px rgba(0,0,0,0.08);
     }
-    #mapWrapper { position: absolute; top: 60px; left: 300px; right: 0; bottom: 0; }
+    #resultsPanel h3 {
+      margin-top: 0.5rem; margin-bottom: 0.75rem;
+    }
+    #mapWrapper { position: absolute; top: 60px; left: 350px; right: 0; bottom: 0; }
     #map { width: 100%; height: 100%; }
 
     /* --- User Cards --- */
     .user-card {
       display: flex; align-items: center; padding: 0.6rem; margin-bottom: 0.6rem;
-      background: #f9f9f9; border-radius: 6px; cursor: pointer;
+      background: #fff; border-radius: 6px; cursor: pointer;
       transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     .user-card:hover { background: #f1f1f1; }
@@ -75,8 +87,9 @@
     /* --- Markers --- */
     .letter-marker {
       background: #013b5c; border: 3px solid white; color: white;
-      border-radius: 50%; text-align: center; font-weight: bold;
-      font-size: 16px; width: 40px; height: 40px; line-height: 34px;
+      border-radius: 50%; font-weight: bold;
+      font-size: 16px; width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
       box-shadow: 0 1px 3px rgba(0,0,0,0.25);
     }
     .letter-marker:hover { filter: drop-shadow(0 0 12px #00f); }
@@ -84,8 +97,8 @@
     /* --- Clusters --- */
     .custom-cluster {
       background-color: #013b5c; color: white; border: 3px solid white;
-      border-radius: 50%; text-align: center; font-weight: bold;
-      line-height: 34px; font-size: 16px; width: 40px; height: 40px;
+      border-radius: 50%; font-weight: bold; font-size: 16px;
+      width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
       box-shadow: 0 1px 3px rgba(0,0,0,0.25);
     }
   </style>
@@ -97,10 +110,11 @@
   <input type="text" id="locationInput" placeholder="Search Location">
   <select id="countryFilter"><option value="">All Countries</option></select>
   <select id="industryFilter"><option value="">All Industries</option></select>
+  <button id="clearFilters">Clear All Filters</button>
 </div>
 
 <div id="resultsPanel">
-  <h3>Visible Users</h3>
+  <h3>Users</h3>
   <div id="nearbyList">Click a marker to see users.</div>
 </div>
 
@@ -116,6 +130,7 @@ const sheetURL='https://docs.google.com/spreadsheets/d/17h6qtv7Kw3ejYyK0hv7XyTUQ
 let allData=[], markers=[], selectedMarker=null;
 
 const markerCluster = L.markerClusterGroup({
+  showCoverageOnHover:false,
   iconCreateFunction: cluster => L.divIcon({
     html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`,
     className:'', iconSize:[40,40], iconAnchor:[20,20]
@@ -147,6 +162,13 @@ fetch(sheetURL).then(r=>r.text()).then(csv=>{
   industrySelect.addEventListener('change',updateMap);
   document.getElementById('searchInput').addEventListener('input',updateMap);
   document.getElementById('locationInput').addEventListener('input',updateMap);
+  document.getElementById('clearFilters').addEventListener('click',()=>{
+    document.getElementById('searchInput').value='';
+    document.getElementById('locationInput').value='';
+    countrySelect.value='';
+    industrySelect.value='';
+    updateMap();
+  });
   map.on('moveend', updateVisibleUsers);
 });
 
@@ -188,7 +210,7 @@ function getMarkerId(marker){
 
 function highlightCard(marker,hover){
   const card=document.querySelector(`[data-marker-id="${getMarkerId(marker)}"]`);
-  if(card) card.style.backgroundColor = hover ? '#e9f5ff' : '#f9f9f9';
+  if(card) card.style.backgroundColor = hover ? '#e9f5ff' : '#fff';
 }
 
 function updateVisibleUsers(){
