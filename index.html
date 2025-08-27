@@ -68,17 +68,21 @@
       padding: 0.5rem 1rem 1rem 1rem; font-size: 0.9rem; z-index: 1000;
       box-sizing: border-box; border-right: 1px solid #ccc;
       box-shadow: 2px 0 4px rgba(0,0,0,0.08);
+      display: flex; flex-direction: column;
     }
-    #resultsPanel h3 { margin-top: 0.5rem; margin-bottom: 0.75rem; }
+    #sidebarHeader {
+      display:flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;
+    }
+    #nearbyList { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
-    #mapWrapper { position: absolute; top: 60px; left: 350px; right: 0; bottom: 0; }
+    #mapWrapper { position: absolute; top: 60px; left: 350px; right: 0; bottom: 0; transition: all 0.3s ease; }
     #map { width: 100%; height: 100%; }
 
     /* User Cards */
     .user-card {
-      display: flex; align-items: center; padding: 0.6rem; margin-bottom: 0.6rem;
-      background: #fff; border-radius: 6px; cursor: pointer;
-      transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      display: flex; align-items: center; padding: 0.6rem; background: #fff;
+      border-radius: 6px; cursor: pointer; transition: all 0.2s ease;
+      width: 250px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     .user-card:hover { background: #f1f1f1; }
     .user-circle {
@@ -102,7 +106,6 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.25);
       background-clip: padding-box;
     }
-    .letter-marker:hover { filter: drop-shadow(0 0 12px #00f); }
 
     /* Cluster markers */
     .custom-cluster {
@@ -128,7 +131,13 @@
 </div>
 
 <div id="resultsPanel">
-  <h3>Users</h3>
+  <div id="sidebarHeader">
+    <h3>Users</h3>
+    <label style="display:flex; align-items:center; font-size:0.85rem; gap:0.3rem;">
+      Show Map
+      <input type="checkbox" id="showMapToggle" checked>
+    </label>
+  </div>
   <div id="nearbyList">Click a marker to see users.</div>
 </div>
 
@@ -191,7 +200,7 @@ fetch(sheetURL).then(r=>r.text()).then(csv=>{
   map.on('moveend', updateVisibleUsers);
 });
 
-// Create marker icons
+// Marker icon
 function createLetterMarker(user){
   const firstLetter = user['First Name'] ? user['First Name'][0].toUpperCase() : '?';
   return L.divIcon({
@@ -252,13 +261,22 @@ function updateVisibleUsers(){
         <div class="user-industry">${d['Industry']||''}</div>
         <div class="user-location">${d['City']||''}${d['State/Province']?', '+d['State/Province']:''}</div>
       </div>`;
+
+    // Click → center & highlight marker
+    div.addEventListener('click',()=>{
+      const latlng = marker.getLatLng();
+      map.setView(latlng,10,{animate:true});
+      marker.getElement().style.filter='drop-shadow(0 0 12px #00f)';
+      setTimeout(()=>marker.getElement().style.filter='none',2000);
+    });
+
     div.addEventListener('mouseenter',()=>marker.getElement().style.filter='drop-shadow(0 0 12px #00f)');
     div.addEventListener('mouseleave',()=>marker.getElement().style.filter='none');
     listDiv.appendChild(div);
   });
 }
 
-// Autocomplete search
+// Autocomplete
 function autocompleteSearch(input, type){
   const val = input.value.toLowerCase();
   const listEl = type==='name'?nameAutocomplete:locationAutocomplete;
@@ -282,6 +300,23 @@ function autocompleteSearch(input, type){
     listEl.appendChild(item);
   });
 }
+
+// Show Map Toggle
+document.getElementById('showMapToggle').addEventListener('change', e=>{
+  const showMap = e.target.checked;
+  const mapWrapper = document.getElementById('mapWrapper');
+  const sidebar = document.getElementById('resultsPanel');
+  if(showMap){
+    mapWrapper.style.display='block';
+    sidebar.style.width='350px';
+    sidebar.style.flexWrap='nowrap';
+    map.invalidateSize();
+  }else{
+    mapWrapper.style.display='none';
+    sidebar.style.width='100%';
+    sidebar.style.flexWrap='wrap';
+  }
+});
 </script>
 </body>
 </html>
