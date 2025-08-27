@@ -1,147 +1,83 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Map with Sidebar and Filters</title>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Map App</title>
 
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-  <!-- MarkerCluster -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<style>
+html,body{height:100%;margin:0;font-family:'Roboto',sans-serif;}
+#topPanel{position:fixed;top:0;left:0;right:0;height:60px;background:#fff;display:flex;align-items:center;padding:0 15px;gap:1rem;z-index:1000;box-sizing:border-box;border-bottom:1px solid #ccc;box-shadow:0 2px 4px rgba(0,0,0,0.08);overflow-x:auto;white-space:nowrap;}
+#topPanel input,#topPanel select,#clearFilters{font-weight:bold;font-family:'Roboto',sans-serif;}
+#topPanel input{height:36px;font-size:14px;padding-left:28px;padding-right:0.5rem;border-radius:4px;border:1px solid #ccc;background:#fff;color:#333;box-shadow:0 1px 2px rgba(0,0,0,0.05);min-width:200px;width:400px;max-width:100%;}
+#topPanel select{height:36px;font-size:14px;padding:0 0.5rem;padding-right:30px;border-radius:4px;border:1px solid #ccc;background:#f7f9fb;color:#333;min-width:150px;}
+#topPanel select option{font-weight:bold;font-family:'Roboto',sans-serif;}
+#clearFilters{height:36px;padding:0 12px;border-radius:4px;border:none;background:#66889e;color:white;cursor:pointer;font-size:14px;font-weight:bold;}
+#clearFilters:hover{background:#577684;}
+.search-wrapper{position:relative;display:inline-block;}
+.search-wrapper svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:16px;height:16px;fill:#666;pointer-events:none;}
+.autocomplete-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:160px;overflow-y:auto;z-index:2000;font-size:14px;}
+.autocomplete-item{padding:6px 8px;cursor:pointer;}
+.autocomplete-item:hover{background:#f0f0f0;}
 
-  <!-- PapaParse -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+#resultsPanel{position:fixed;top:60px;left:0;width:350px;bottom:0;overflow-y:auto;background:#f7f9fb;color:#333;padding:0.75rem 0.5rem;font-size:0.9rem;z-index:1000;box-sizing:border-box;border-right:1px solid #ccc;box-shadow:2px 0 4px rgba(0,0,0,0.08);display:flex;flex-direction:column;}
+#sidebarHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;position:relative;}
+#sidebarHeader h3{margin:0;font-size:1.5rem;color:#013b5c;}
+.switch-wrapper{display:flex;align-items:center;position:absolute;right:0;}
+.switch-wrapper label{margin-right:8px;font-weight:bold;color:#013b5c;}
+.switch{position:relative;display:inline-block;width:40px;height:20px;}
+.switch input{opacity:0;width:0;height:0;}
+.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;transition:.4s;border-radius:20px;}
+.slider:before{position:absolute;content:"";height:16px;width:16px;left:2px;bottom:2px;background-color:white;transition:.4s;border-radius:50%;}
+input:checked + .slider{background-color:#013b5c;}
+input:checked + .slider:before{transform:translateX(20px);}
 
-  <style>
-    html, body { height: 100%; margin: 0; font-family: 'Roboto', sans-serif; }
+#nearbyList{display:flex;flex-wrap:wrap;gap:0.5rem;justify-content:flex-start;padding-left:0;padding-right:0;margin:0;box-sizing:border-box;}
+#mapWrapper{position:absolute;top:60px;left:350px;right:0;bottom:0;transition:all 0.3s ease;}
+#map{width:100%;height:100%;}
 
-    /* Top Panel */
-    #topPanel {
-      position: fixed; top: 0; left: 0; right: 0; height: 60px;
-      background: #ffffff; display: flex; align-items: center;
-      padding: 0 15px; gap: 1rem; z-index: 1000;
-      box-sizing: border-box; border-bottom: 1px solid #ccc;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-      overflow-x: auto; white-space: nowrap;
-    }
-    #topPanel input, #topPanel select, #clearFilters {
-      font-weight: bold;
-      font-family: 'Roboto', sans-serif;
-    }
-    #topPanel input {
-      height: 36px; font-size: 14px; padding-left:28px; padding-right:0.5rem;
-      border-radius: 4px; border: 1px solid #ccc; background: #fff; color: #333;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-      min-width: 200px; width: 400px; max-width: 100%;
-    }
-    #topPanel select {
-      height: 36px; font-size: 14px; padding: 0 0.5rem; padding-right:30px;
-      border-radius:4px; border:1px solid #ccc; background:#f7f9fb; color:#333;
-      min-width:180px;
-    }
-    #topPanel select option { font-weight:bold; font-family:'Roboto',sans-serif; }
-    #clearFilters {
-      height:36px; padding:0 12px;
-      border-radius:4px; border:none; background:#66889e; color:white; cursor:pointer;
-      font-size:14px; font-weight:bold;
-    }
-    #clearFilters:hover{background:#577684;}
+.user-card{display:flex;align-items:center;padding:0.6rem;background:#fff;border-radius:6px;cursor:pointer;transition:all 0.2s ease;width:250px;box-shadow:0 1px 2px rgba(0,0,0,0.05);}
+.user-card:hover{background:#f1f1f1;}
+.user-circle{width:60px;height:60px;border-radius:50%;background:#013b5c;border:3px solid white;color:white;font-weight:bold;font-size:20px;display:flex;align-items:center;justify-content:center;margin-right:0.75rem;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+.user-info{display:flex;flex-direction:column;}
+.user-name{font-weight:500;font-size:1rem;margin-bottom:0.1rem;}
+.user-company{font-size:0.85rem;color:#444;}
+.user-industry{font-size:0.8rem;color:#666;}
+.user-location{font-size:0.8rem;color:#666;}
 
-    /* Icons inside search bars */
-    .search-wrapper { position:relative; display:inline-block; }
-    .search-wrapper svg { position:absolute; left:8px; top:50%; transform:translateY(-50%); width:16px; height:16px; fill:#666; pointer-events:none; }
+.letter-marker{background:#013b5c !important;border:3px solid white;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:16px;box-shadow:0 1px 3px rgba(0,0,0,0.25);background-clip:padding-box;background-image:none !important;}
+.leaflet-div-icon{background:transparent !important;border:none !important;}
+.pulse{animation:pulseAnim 0.6s ease-in-out 2;}
+@keyframes pulseAnim{0%{transform:scale(1);}50%{transform:scale(1.4);}100%{transform:scale(1);}}
 
-    /* Autocomplete dropdowns */
-    .autocomplete-list {
-      position: absolute; top: 100%; left: 0; right: 0;
-      background: #fff; border:1px solid #ccc; border-radius:4px;
-      max-height:160px; overflow-y:auto; z-index:2000; font-size:14px;
-    }
-    .autocomplete-item { padding:6px 8px; cursor:pointer; }
-    .autocomplete-item:hover { background:#f0f0f0; }
+.custom-cluster{background-color:#013b5c;color:white;border:3px solid white;border-radius:50%;font-weight:bold;font-size:16px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.25);}
 
-    /* Sidebar */
-    #resultsPanel {
-      position: fixed; top: 60px; left: 0; width: 350px; bottom: 0;
-      overflow-y: auto; background:#f7f9fb; color: #333;
-      padding:0.75rem 0.5rem; font-size:0.9rem; z-index:1000; box-sizing:border-box;
-      border-right:1px solid #ccc; box-shadow:2px 0 4px rgba(0,0,0,0.08);
-      display:flex; flex-direction:column;
-    }
-    #sidebarHeader { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; position:relative; }
-    #sidebarHeader h3 { margin:0; font-size:1.5rem; color:#013b5c; }
-    .switch { position: absolute; right:0; display: inline-block; width:40px; height:20px; }
-    .switch input { opacity:0; width:0; height:0; }
-    .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#ccc; transition:.4s; border-radius:20px; }
-    .slider:before { position:absolute; content:""; height:16px; width:16px; left:2px; bottom:2px; background-color:white; transition:.4s; border-radius:50%; }
-    input:checked + .slider { background-color:#013b5c; }
-    input:checked + .slider:before { transform:translateX(20px); }
-
-    #nearbyList { display: flex; flex-wrap: wrap; gap:0.5rem; justify-content:flex-start; padding-left:0; padding-right:0; margin:0; box-sizing:border-box; }
-
-    #mapWrapper { position:absolute; top:60px; left:350px; right:0; bottom:0; transition:all 0.3s ease; }
-    #map { width:100%; height:100%; }
-
-    /* User Cards */
-    .user-card { display:flex; align-items:center; padding:0.6rem; background:#fff;
-      border-radius:6px; cursor:pointer; transition:all 0.2s ease;
-      width:250px; box-shadow:0 1px 2px rgba(0,0,0,0.05); margin:0; }
-    .user-card:hover { background:#f1f1f1; }
-    .user-circle { width:60px; height:60px; border-radius:50%; background:#013b5c; border:3px solid white;
-      color:white; font-weight:bold; font-size:20px; display:flex; align-items:center; justify-content:center; margin-right:0.75rem; flex-shrink:0; box-shadow:0 1px 3px rgba(0,0,0,0.1);}
-    .user-info { display:flex; flex-direction:column; }
-    .user-name { font-weight:500; font-size:1rem; margin-bottom:0.1rem; }
-    .user-company { font-size:0.85rem; color:#444; }
-    .user-industry { font-size:0.8rem; color:#666; }
-    .user-location { font-size:0.8rem; color:#666; }
-
-    /* Markers */
-    .letter-marker {
-      background: #013b5c !important;
-      border:3px solid white;
-      border-radius:50%;
-      width:40px; height:40px;
-      display:flex; align-items:center; justify-content:center;
-      color:white; font-weight:bold; font-size:16px;
-      box-shadow:0 1px 3px rgba(0,0,0,0.25);
-      background-clip: padding-box;
-      background-image: none !important;
-    }
-    .leaflet-div-icon { background: transparent !important; border:none !important; }
-
-    .pulse { animation:pulseAnim 0.6s ease-in-out 2; }
-    @keyframes pulseAnim {0%{transform:scale(1);}50%{transform:scale(1.4);}100%{transform:scale(1);}}
-
-    /* Cluster markers */
-    .custom-cluster { background-color:#013b5c; color:white; border:3px solid white; border-radius:50%;
-      font-weight:bold; font-size:16px; width:40px; height:40px; display:flex; align-items:center; justify-content:center;
-      box-shadow:0 1px 3px rgba(0,0,0,0.25); }
-
-    /* Responsive */
-    @media(max-width:768px){#resultsPanel{width:100%;height:auto;top:60px;position:relative;}#mapWrapper{top:calc(60px+0px);left:0;height:400px;}#nearbyList{justify-content:center;}}
-  </style>
+@media(max-width:768px){#resultsPanel{width:100%;height:auto;top:60px;position:relative;}#mapWrapper{top:calc(60px+0px);left:0;height:400px;}#nearbyList{justify-content:center;}}
+</style>
 </head>
 <body>
 
 <div id="topPanel">
   <div class="search-wrapper">
-    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27 A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16 c1.61 0 3.09-.59 4.23-1.57l.27.28v.79 l5 4.99L20.49 19l-4.99-5zm-6 0 C8.01 14 6 11.99 6 9.5S8.01 5 10.5 5 15 7.01 15 9.5 12.99 14 10.5 14z"/></svg>
+    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C8.01 14 6 11.99 6 9.5S8.01 5 10.5 5 15 7.01 15 9.5 12.99 14 10.5 14z"/></svg>
     <input type="text" id="searchInput" placeholder="Search by Name">
     <div id="nameAutocomplete" class="autocomplete-list"></div>
   </div>
   <div class="search-wrapper">
-    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5 a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/></svg>
+    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/></svg>
     <input type="text" id="locationInput" placeholder="Search by Location">
     <div id="locationAutocomplete" class="autocomplete-list"></div>
   </div>
+  <select id="countryFilter"><option value="">All Countries</option></select>
   <select id="industryFilter"><option value="">All Industries</option></select>
   <button id="clearFilters">Clear All Filters</button>
 </div>
@@ -149,10 +85,10 @@
 <div id="resultsPanel">
   <div id="sidebarHeader">
     <h3>Users</h3>
-    <label class="switch">
-      <input type="checkbox" id="toggleMap" checked>
-      <span class="slider round"></span>
-    </label>
+    <div class="switch-wrapper">
+      <label for="toggleMap">Show Map</label>
+      <label class="switch"><input type="checkbox" id="toggleMap" checked><span class="slider round"></span></label>
+    </div>
   </div>
   <div id="nearbyList">Click a marker to see users.</div>
 </div>
@@ -172,25 +108,28 @@ const markerCluster = L.markerClusterGroup({
 });
 map.addLayer(markerCluster);
 
+const nameInput = document.getElementById('searchInput');
+const locInput = document.getElementById('locationInput');
+const nameAuto = document.getElementById('nameAutocomplete');
+const locAuto = document.getElementById('locationAutocomplete');
+
 fetch(sheetURL).then(r=>r.text()).then(csv=>{
   const parsed = Papa.parse(csv,{header:true, skipEmptyLines:true});
   allData = parsed.data;
 
-  const industrySet=new Set();
-  allData.forEach(r=>{ if(r['Industry']) industrySet.add(r['Industry']); });
+  const industrySet=new Set(), countrySet=new Set();
+  allData.forEach(r=>{ if(r['Industry']) industrySet.add(r['Industry']); if(r['Country']) countrySet.add(r['Country']); });
 
   const industrySelect=document.getElementById('industryFilter');
   Array.from(industrySet).sort().forEach(ind=>{ const o=document.createElement('option'); o.value=ind; o.textContent=ind; industrySelect.appendChild(o); });
+  const countrySelect=document.getElementById('countryFilter');
+  Array.from(countrySet).sort().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; countrySelect.appendChild(o); });
 
   updateMap();
   industrySelect.addEventListener('change',updateMap);
-  document.getElementById('searchInput').addEventListener('input',updateMap);
-  document.getElementById('locationInput').addEventListener('input',updateMap);
+  countrySelect.addEventListener('change',updateMap);
   document.getElementById('clearFilters').addEventListener('click',()=>{
-    document.getElementById('searchInput').value='';
-    document.getElementById('locationInput').value='';
-    document.getElementById('industryFilter').value='';
-    updateMap();
+    nameInput.value=''; locInput.value=''; industrySelect.value=''; countrySelect.value=''; updateMap();
   });
   map.on('moveend', updateVisibleUsers);
 });
@@ -203,13 +142,11 @@ function createLetterMarker(user){
 function updateMap(){
   markerCluster.clearLayers(); markers=[]; selectedMarker=null;
   const industryF=document.getElementById('industryFilter').value.toLowerCase();
-  const nameF=document.getElementById('searchInput').value.toLowerCase();
-  const locF=document.getElementById('locationInput').value.toLowerCase();
+  const countryF=document.getElementById('countryFilter').value.toLowerCase();
 
   allData.forEach(row=>{
     if(industryF && row['Industry']?.toLowerCase()!==industryF) return;
-    if(nameF && !(`${row['First Name']} ${row['Last Name']}`.toLowerCase().includes(nameF))) return;
-    if(locF && row['City'] && !row['City'].toLowerCase().includes(locF)) return;
+    if(countryF && row['Country']?.toLowerCase()!==countryF) return;
     if(!row['Geocode']||!row['Geocode'].includes(',')) return;
     let [lat,lng]=row['Geocode'].split(',').map(Number);
     if(isNaN(lat)||isNaN(lng)) return;
@@ -224,6 +161,7 @@ function updateMap(){
     markerCluster.addLayer(marker);
   });
   updateVisibleUsers();
+  setupAutocomplete();
 }
 
 function pulseMarker(marker){
@@ -237,7 +175,7 @@ function getMarkerId(marker){ const d=marker.data; return `${d['First Name']}_${
 
 function highlightCard(marker,hover){
   const card=document.querySelector(`[data-marker-id="${getMarkerId(marker)}"]`);
-  if(card) card.style.backgroundColor = hover ? 'rgba(255,255,255,0.2)' : '#fff';
+  if(card) card.style.backgroundColor = hover ? 'rgba(0,150,205,0.15)' : '#fff';
 }
 
 function updateVisibleUsers(){
@@ -253,7 +191,7 @@ function updateVisibleUsers(){
         <div class="user-name">${marker.data['First Name']} ${marker.data['Last Name']}</div>
         <div class="user-company">${marker.data['Business Name']||''}</div>
         <div class="user-industry">${marker.data['Industry']||''}</div>
-        <div class="user-location">${marker.data['City']||''}, ${marker.data['State/Province']||''}</div>
+        <div class="user-location">${marker.data['City']||''}, ${marker.data['State/Province']||''}, ${marker.data['Country']||''}</div>
       </div>`;
     div.addEventListener('mouseenter',()=>marker.getElement().style.filter='drop-shadow(0 0 12px #00f)');
     div.addEventListener('mouseleave',()=>marker.getElement().style.filter='drop-shadow(0 0 0 rgba(0,0,0,0))');
@@ -261,6 +199,41 @@ function updateVisibleUsers(){
     listDiv.appendChild(div);
   });
 }
+
+// Autocomplete setup
+function setupAutocomplete(){
+  setupInputAutocomplete(nameInput,nameAuto,'First Name','Last Name');
+  setupInputAutocomplete(locInput,locAuto,'City');
+}
+
+function setupInputAutocomplete(input,autoDiv,...fields){
+  autoDiv.innerHTML='';
+  input.addEventListener('input',()=>{
+    const val=input.value.toLowerCase().trim();
+    autoDiv.innerHTML='';
+    if(!val) return;
+    const matches = allData.filter(r=>fields.some(f=>r[f]?.toLowerCase().includes(val)));
+    matches.slice(0,5).forEach(r=>{
+      const div=document.createElement('div'); div.className='autocomplete-item';
+      div.textContent = fields.map(f=>r[f]).join(' ');
+      div.addEventListener('click',()=>{
+        const marker = markers.find(m=>getMarkerId(m)===getMarkerId({data:r}));
+        if(marker){map.setView(marker.getLatLng(),8); pulseMarker(marker); highlightCard(marker,true);}
+        input.value = fields.map(f=>r[f]).join(' ');
+        autoDiv.innerHTML='';
+      });
+      autoDiv.appendChild(div);
+    });
+  });
+}
+
+// Show Map toggle
+const toggleMap=document.getElementById('toggleMap');
+toggleMap.addEventListener('change',()=>{
+  const mapWrapper=document.getElementById('mapWrapper');
+  if(toggleMap.checked){mapWrapper.style.display='block';document.getElementById('resultsPanel').style.width='350px';} 
+  else{mapWrapper.style.display='none';document.getElementById('resultsPanel').style.width='100%';}
+});
 </script>
 </body>
 </html>
