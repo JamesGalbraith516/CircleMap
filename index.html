@@ -30,9 +30,12 @@
     #topPanel input, #topPanel select, #clearFilters {
       height: 36px; font-size: 14px; padding: 0 0.5rem; border-radius: 4px; border: 1px solid #ccc; font-family: 'Roboto', sans-serif; font-weight: bold;
       background: #f7f9fb;
+      max-width: 300px;
+      flex:1;
     }
     #clearFilters {
       background-color: #66889e; color: white; cursor: pointer;
+      flex:0 0 auto;
     }
     #resultsPanel {
       position: fixed; top: 60px; left: 0; width: 350px; bottom: 0;
@@ -44,6 +47,7 @@
     .user-card {
       display: flex; align-items: center; padding: 0.5rem; margin-bottom: 0.5rem;
       background: #fff; border-radius: 4px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      overflow: hidden;
     }
     .user-card:hover { background: rgba(0,150,205,0.15); }
     .user-circle {
@@ -60,11 +64,13 @@
     .letter-marker {
       background: #013b5c; border: 3px solid white; color: white; border-radius: 50%;
       text-align: center; font-weight: bold; font-size: 16px; width: 40px; height: 40px; line-height: 34px;
+      transition: filter 0.2s;
     }
 
     .custom-cluster {
       background-color: #013b5c; color: white; border: 3px solid white; border-radius: 50%;
       text-align: center; font-weight: bold; line-height: 40px; font-size: 16px;
+      transition: filter 0.2s;
     }
 
     .autocomplete-dropdown {
@@ -73,17 +79,17 @@
     .autocomplete-item { padding: 5px; cursor: pointer; }
     .autocomplete-item:hover { background: #eee; }
 
-    #sidebarHeader { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-    #toggleMapWrapper { display:flex; align-items:center; }
-    #toggleMap { width: 40px; height: 20px; position: relative; appearance: none; background: #ccc; border-radius: 20px; outline:none; cursor:pointer; margin-left:8px; transition:0.3s; }
-    #toggleMap:checked { background: #013b5c; }
-    #toggleMap:before { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:white; transition:0.3s; }
-    #toggleMap:checked:before { transform: translateX(20px); }
+    #resultsPanel h3 {
+      font-size: 1.5rem; /* 50% larger */
+      margin:0;
+      color: #013b5c;
+    }
 
     @media(max-width:768px){
       #resultsPanel { width: 100%; }
       #mapWrapper { left:0; top:110px; height:calc(100% - 110px); }
       .autocomplete-dropdown { width: calc(100% - 20px); }
+      #topPanel input { max-width: 45%; }
     }
   </style>
 </head>
@@ -100,10 +106,7 @@
 </div>
 
 <div id="resultsPanel">
-  <div id="sidebarHeader">
-    <h3>Users</h3>
-    <div id="toggleMapWrapper"><label for="toggleMap">Show Map</label><input type="checkbox" id="toggleMap"></div>
-  </div>
+  <h3>Users</h3>
   <div id="nearbyList">Click a marker to see users.</div>
 </div>
 
@@ -147,113 +150,72 @@ fetch(sheetURL).then(r=>r.text()).then(csv=>{
   document.getElementById('clearFilters').addEventListener('click',()=>{
     nameInput.value=''; locationInput.value=''; industrySelect.value=''; countrySelect.value=''; updateMap();
   });
-  map.on('moveend',updateVisibleUsers);
 });
 
 function createLetterMarker(user){
-  const firstLetter=user['First Name']?user['First Name'][0].toUpperCase():'?';
-  return L.divIcon({html:`<div class="letter-marker">${firstLetter}</div>`,iconSize:[40,40],iconAnchor:[20,20]});
+  const firstLetter = user['First Name'] ? user['First Name'][0].toUpperCase() : '?';
+  return L.divIcon({ html:`<div class="letter-marker">${firstLetter}</div>`, iconSize:[40,40], iconAnchor:[20,20] });
 }
 
 function updateMap(){
   markerCluster.clearLayers(); markers=[]; selectedMarker=null;
-  const industryF=document.getElementById('industryFilter').value.toLowerCase();
   const countryF=document.getElementById('countryFilter').value.toLowerCase();
+  const industryF=document.getElementById('industryFilter').value.toLowerCase();
 
   allData.forEach(row=>{
-    if(industryF && row['Industry']?.toLowerCase()!==industryF)return;
-    if(countryF && row['Country']?.toLowerCase()!==countryF)return;
-    if(!row['Geocode']||!row['Geocode'].includes(','))return;
+    if(countryF && row['Country']?.toLowerCase()!==countryF) return;
+    if(industryF && row['Industry']?.toLowerCase()!==industryF) return;
+    if(!row['Geocode']||!row['Geocode'].includes(',')) return;
     let [lat,lng]=row['Geocode'].split(',').map(Number);
-    if(isNaN(lat)||isNaN(lng))return;
-    lat=parseFloat(lat.toFixed(2)); lng=parseFloat(lng.toFixed(2));
+    lat=Math.round(lat*100)/100;
+    lng=Math.round(lng*100)/100;
+
+    if(isNaN(lat)||isNaN(lng)) return;
 
     const marker=L.marker([lat,lng],{icon:createLetterMarker(row)});
     marker.data=row;
     marker.on('mouseover',()=>highlightCard(marker,true));
     marker.on('mouseout',()=>highlightCard(marker,false));
-    marker.on('click',()=>{map.setView(marker.getLatLng(),8); pulseMarker(marker);});
     markers.push(marker);
     markerCluster.addLayer(marker);
   });
   updateVisibleUsers();
-  setupAutocomplete();
 }
 
-function pulseMarker(marker){
-  const el=marker.getElement(); if(!el)return;
-  el.classList.add('pulse'); setTimeout(()=>el.classList.remove('pulse'),1200);
-}
-
-function getMarkerId(marker){const d=marker.data;return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_');}
+function getMarkerId(marker){ const d=marker.data; return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_'); }
 
 function highlightCard(marker,hover){
   const card=document.querySelector(`[data-marker-id="${getMarkerId(marker)}"]`);
-  if(card)card.style.backgroundColor=hover?'rgba(0,150,205,0.15)':'#fff';
-  const el=marker.getElement();
-  if(el)el.style.filter=hover?'drop-shadow(0 0 12px #00f)':'drop-shadow(0 0 0 rgba(0,0,0,0))';
+  if(card) card.style.backgroundColor = hover ? 'rgba(0,150,205,0.15)' : 'transparent';
+  if(hover) {
+    const el=marker.getElement();
+    if(el) el.style.filter='drop-shadow(0 0 12px #00f)';
+  } else {
+    const el=marker.getElement();
+    if(el) el.style.filter='';
+  }
 }
 
 function updateVisibleUsers(){
   const bounds=map.getBounds();
   const listDiv=document.getElementById('nearbyList'); listDiv.innerHTML='';
   const visible=markers.filter(m=>bounds.contains(m.getLatLng()));
-  if(!visible.length){listDiv.textContent='No users visible on map.';return;}
+  if(!visible.length){ listDiv.textContent='No users visible on map.'; return; }
 
   visible.forEach(marker=>{
     const div=document.createElement('div'); div.className='user-card'; div.dataset.markerId=getMarkerId(marker);
-    div.innerHTML=`<div class="user-circle" title="${marker.data['First Name'] || ''}">${marker.data['First Name']?.[0].toUpperCase()||'?'}</div>
+    div.innerHTML=`<div class="user-circle">${marker.data['First Name']?.[0].toUpperCase()||'?'}</div>
       <div class="user-info">
         <div class="user-name" title="${marker.data['First Name']} ${marker.data['Last Name']}">${marker.data['First Name']} ${marker.data['Last Name']}</div>
         <div class="user-company" title="${marker.data['Business Name']||''}">${marker.data['Business Name']||''}</div>
         <div class="user-industry" title="${marker.data['Industry']||''}">${marker.data['Industry']||''}</div>
-        <div class="user-location" title="${marker.data['City']||''}, ${marker.data['State/Province']||''}, ${marker.data['Country']||''}">${marker.data['City']||''}, ${marker.data['State/Province']||''}, ${marker.data['Country']||''}</div>
+        <div class="user-location" title="${marker.data['City']||''}, ${marker.data['State/Province']||''}">${marker.data['City']||''}, ${marker.data['State/Province']||''}</div>
       </div>`;
     div.addEventListener('mouseenter',()=>highlightCard(marker,true));
     div.addEventListener('mouseleave',()=>highlightCard(marker,false));
-    div.addEventListener('click',()=>{map.setView(marker.getLatLng(),8); pulseMarker(marker);});
     listDiv.appendChild(div);
   });
 }
-
-// Autocomplete
-function setupAutocomplete(){
-  setupInputAutocomplete(nameInput,nameAuto,['First Name','Last Name']);
-  setupInputAutocomplete(locationInput,locAuto,['City']);
-}
-
-function setupInputAutocomplete(input,autoDiv,fields){
-  input.addEventListener('input',()=>{
-    autoDiv.innerHTML='';
-    const val=input.value.toLowerCase().trim();
-    if(!val)return;
-    const matches=allData.filter(r=>fields.some(f=>r[f]?.toLowerCase().includes(val)));
-    matches.slice(0,5).forEach(r=>{
-      const div=document.createElement('div'); div.className='autocomplete-item';
-      div.textContent=fields.map(f=>r[f]).join(' ');
-      div.addEventListener('click',()=>{
-        const marker=markers.find(m=>getMarkerId(m)===getMarkerId({data:r}));
-        if(marker){map.setView(marker.getLatLng(),8); pulseMarker(marker); highlightCard(marker,true);}
-        input.value=fields.map(f=>r[f]).join(' ');
-        autoDiv.innerHTML='';
-      });
-      autoDiv.appendChild(div);
-    });
-    const rect=input.getBoundingClientRect();
-    autoDiv.style.top=(rect.bottom+window.scrollY)+'px';
-    autoDiv.style.left=(rect.left+window.scrollX)+'px';
-    autoDiv.style.width=rect.width+'px';
-  });
-}
-
-// Show Map toggle
-const toggleMap=document.getElementById('toggleMap');
-toggleMap.addEventListener('change',()=>{
-  const mapWrapper=document.getElementById('mapWrapper');
-  const resultsPanel=document.getElementById('resultsPanel');
-  if(toggleMap.checked){mapWrapper.style.display='block';resultsPanel.style.width='350px';} 
-  else{mapWrapper.style.display='none';resultsPanel.style.width='100%';}
-});
 </script>
 </body>
 </html>
