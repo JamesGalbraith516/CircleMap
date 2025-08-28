@@ -20,16 +20,16 @@
   <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-  <style>
+<style>
     html, body { height: 100%; margin: 0; font-family: 'Roboto', sans-serif; }
-          #topPanel {
-            position: fixed; top: 0; left: 0; right: 0; height: 60px;
-            background: #fff; display: flex; align-items: center; padding: 0 15px; gap: 1rem; z-index: 1000;
-            box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          }
-          #topPanel input, #topPanel select, #clearFilters {
+         #topPanel input, #topPanel select, #clearFilters {
             height: 36px; font-size: 14px; padding: 0 0.5rem; border-radius: 4px; border: 1px solid #ccc; font-family: 'Roboto', sans-serif; font-weight: bold;
             background: #f7f9fb;
+          }
+          
+          /* Override background for search inputs to show icons */
+          #searchInput, #locationInput {
+            background-color: #f7f9fb;
           }
           #searchInput {
             flex: 1;
