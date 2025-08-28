@@ -22,40 +22,40 @@
 
   <style>
     html, body { height: 100%; margin: 0; font-family: 'Roboto', sans-serif; }
-       #topPanel {
-        position: fixed; top: 0; left: 0; right: 0; height: 60px;
-        background: #fff; display: flex; align-items: center; padding: 0 15px; gap: 1rem; z-index: 1000;
-        box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      }
-      #topPanel input, #topPanel select, #clearFilters {
-        height: 36px; font-size: 14px; padding: 0 0.5rem; border-radius: 4px; border: 1px solid #ccc; font-family: 'Roboto', sans-serif; font-weight: bold;
-        background: #f7f9fb;
-      }
-      #clearFilters {
-        background-color: #66889e; color: white; cursor: pointer;
-        flex: 0 0 auto;
-        order: 1; /* Place clear button first */
-      }
-      #countryFilter {
-        flex: 0 0 auto;
-        max-width: 150px;
-        order: 2; /* Place country filter second */
-      }
-      #industryFilter {
-        flex: 0 0 auto;
-        max-width: 150px;
-        order: 3; /* Place industry filter third */
-      }
-      #searchInput {
-        flex: 1; /* Equal flex grow */
-        min-width: 0; /* Allow shrinking */
-        order: 4; /* Place first search input fourth */
-      }
-      #locationInput {
-        flex: 1; /* Equal flex grow */
-        min-width: 0; /* Allow shrinking */
-        order: 5; /* Place second search input fifth */
-      }
+          #topPanel {
+            position: fixed; top: 0; left: 0; right: 0; height: 60px;
+            background: #fff; display: flex; align-items: center; padding: 0 15px; gap: 1rem; z-index: 1000;
+            box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+          #topPanel input, #topPanel select, #clearFilters {
+            height: 36px; font-size: 14px; padding: 0 0.5rem; border-radius: 4px; border: 1px solid #ccc; font-family: 'Roboto', sans-serif; font-weight: bold;
+            background: #f7f9fb;
+          }
+          #searchInput {
+            flex: 1; /* Equal flex grow */
+            min-width: 0; /* Allow shrinking */
+            order: 1; /* Place first search input first */
+          }
+          #locationInput {
+            flex: 1; /* Equal flex grow */
+            min-width: 0; /* Allow shrinking */
+            order: 2; /* Place second search input second */
+          }
+          #countryFilter {
+            flex: 0 0 auto;
+            max-width: 150px;
+            order: 3; /* Place country filter third */
+          }
+          #industryFilter {
+            flex: 0 0 auto;
+            max-width: 150px;
+            order: 4; /* Place industry filter fourth */
+          }
+          #clearFilters {
+            background-color: #66889e; color: white; cursor: pointer;
+            flex: 0 0 auto;
+            order: 5; /* Place clear button last (far right) */
+          }
     }
     #resultsPanel {
       position: fixed; top: 60px; left: 0; width: 350px; bottom: 0;
@@ -122,30 +122,30 @@
       box-shadow: none !important;
     }
 
-       @media(max-width:768px){
-      #resultsPanel { width: 100%; }
-      #mapWrapper { left:0; top:110px; height:calc(100% - 110px); }
-      .autocomplete-dropdown { width: calc(100% - 20px); }
-      #topPanel {
-        flex-wrap: wrap;
-        height: auto;
-        min-height: 60px;
-        padding: 10px 15px;
-      }
-      #clearFilters {
-        order: 1;
-        flex: 0 0 auto;
-        margin-bottom: 5px;
-      }
-      #countryFilter, #industryFilter {
-        flex: 0 0 calc(50% - 0.5rem);
-        order: 2;
-        margin-bottom: 5px;
-      }
-      #searchInput, #locationInput {
-        flex: 0 0 calc(50% - 0.5rem);
-        order: 3;
-      }
+      @media(max-width:768px){
+        #resultsPanel { width: 100%; }
+        #mapWrapper { left:0; top:110px; height:calc(100% - 110px); }
+        .autocomplete-dropdown { width: calc(100% - 20px); }
+        #topPanel {
+          flex-wrap: wrap;
+          height: auto;
+          min-height: 60px;
+          padding: 10px 15px;
+        }
+        #searchInput, #locationInput {
+          flex: 0 0 calc(50% - 0.5rem);
+          order: 1;
+        }
+        #countryFilter, #industryFilter {
+          flex: 0 0 calc(50% - 0.5rem);
+          order: 2;
+          margin-bottom: 5px;
+        }
+        #clearFilters {
+          order: 3;
+          flex: 0 0 auto;
+          margin-bottom: 5px;
+        }
 }
   </style>
 </head>
