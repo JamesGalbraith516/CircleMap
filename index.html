@@ -23,6 +23,7 @@
   <style>
     html, body { height: 100%; margin: 0; font-family: 'Roboto', sans-serif; }
     #topPanel {
+      z-index: 200000 !important;
       position: fixed; top: 0; left: 0; right: 0; height: 60px;
       background: #fff; display: flex; align-items: center; padding: 0 15px; gap: 1rem; z-index: 1000;
       box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -34,6 +35,7 @@
     
     .search-container {
       position: relative;
+      z-index: 100000 !important;
       flex: 1;
       min-width: 0;
     }
@@ -200,7 +202,7 @@
       border: 1px solid #ccc; 
       border-top: none;
       border-radius: 0 0 4px 4px;
-      z-index: 99999; 
+      z-index: 999999 !important;
       max-height: 200px; 
       overflow-y: auto; 
       font-family: 'Roboto', sans-serif; 
