@@ -79,8 +79,78 @@
       position: fixed; top: 60px; left: 0; width: 350px; bottom: 0;
       overflow-y: auto; background: #f7f9fb; color: #013b5c; padding: 1rem; font-size: 0.9rem; z-index: 999; box-sizing: border-box;
     }
-    #mapWrapper { position: absolute; top: 60px; left: 350px; right: 0; bottom: 0; }
+    #mapWrapper { 
+      position: absolute; top: 60px; left: 350px; right: 0; bottom: 0; 
+    }
     #map { width: 100%; height: 100%; }
+
+    /* Popover card styles */
+    #popoverCard {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      padding: 16px;
+      display: none;
+      z-index: 1000;
+      max-width: 350px;
+      width: calc(100% - 40px);
+      min-width: 280px;
+    }
+
+    #popoverCard.show {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .popover-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #013b5c;
+      border: 3px solid white;
+      color: white;
+      font-weight: bold;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .popover-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .popover-name {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #013b5c;
+      margin-bottom: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .popover-company, .popover-industry, .popover-location {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .popover-company {
+      font-weight: 500;
+      color: #333;
+    }
 
     .user-card {
       display: flex; align-items: center; padding: 0.5rem; margin-bottom: 0.5rem;
@@ -206,6 +276,13 @@
         flex: 0 0 auto;
         margin-bottom: 5px;
       }
+      
+      /* Mobile popover adjustments */
+      #popoverCard {
+        max-width: calc(100% - 20px);
+        min-width: calc(100% - 40px);
+        bottom: 10px;
+      }
     }
   </style>
 </head>
@@ -232,6 +309,16 @@
 
 <div id="mapWrapper">
   <div id="map"></div>
+  <!-- Popover Card -->
+  <div id="popoverCard">
+    <div class="popover-avatar" id="popoverAvatar"></div>
+    <div class="popover-details">
+      <div class="popover-name" id="popoverName"></div>
+      <div class="popover-company" id="popoverCompany"></div>
+      <div class="popover-industry" id="popoverIndustry"></div>
+      <div class="popover-location" id="popoverLocation"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -251,6 +338,50 @@ const nameInput=document.getElementById('searchInput');
 const locationInput=document.getElementById('locationInput');
 const nameAuto=document.getElementById('nameAutocomplete');
 const locAuto=document.getElementById('locationAutocomplete');
+
+// Popover card elements
+const popoverCard = document.getElementById('popoverCard');
+const popoverAvatar = document.getElementById('popoverAvatar');
+const popoverName = document.getElementById('popoverName');
+const popoverCompany = document.getElementById('popoverCompany');
+const popoverIndustry = document.getElementById('popoverIndustry');
+const popoverLocation = document.getElementById('popoverLocation');
+
+// Show popover card
+function showPopover(userData) {
+  const firstLetter = userData['First Name'] ? userData['First Name'][0].toUpperCase() : '?';
+  const fullName = `${userData['First Name'] || ''} ${userData['Last Name'] || ''}`.trim();
+  const company = userData['Business Name'] || '';
+  const industry = userData['Industry'] || '';
+  const city = userData['City'] || '';
+  const state = userData['State/Province'] || '';
+  const location = [city, state].filter(Boolean).join(', ');
+
+  popoverAvatar.textContent = firstLetter;
+  popoverName.textContent = fullName;
+  popoverCompany.textContent = company;
+  popoverIndustry.textContent = industry;
+  popoverLocation.textContent = location;
+
+  popoverCard.classList.add('show');
+}
+
+// Hide popover card
+function hidePopover() {
+  popoverCard.classList.remove('show');
+}
+
+// Click outside popover to hide
+document.addEventListener('click', function(e) {
+  if (!popoverCard.contains(e.target) && !e.target.closest('.leaflet-marker-icon')) {
+    hidePopover();
+  }
+});
+
+// Prevent popover from closing when clicking inside it
+popoverCard.addEventListener('click', function(e) {
+  e.stopPropagation();
+});
 
 // Autocomplete functionality
 function setupAutocomplete() {
@@ -481,6 +612,12 @@ function updateMap(){
 
     marker.on('mouseover',()=>highlightCard(marker,true));
     marker.on('mouseout',()=>highlightCard(marker,false));
+    
+    // Add click event to show popover
+    marker.on('click', (e) => {
+      e.originalEvent.stopPropagation();
+      showPopover(marker.data);
+    });
 
     markers.push(marker);
     markerCluster.addLayer(marker);
