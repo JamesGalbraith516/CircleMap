@@ -22,7 +22,69 @@
 
   <style>
     html, body { height: 100%; margin: 0; font-family: 'Roboto', sans-serif; }
-    /* ... your existing styles ... */
+    #topPanel {
+      z-index: 200000 !important;
+      position: fixed; top: 0; left: 0; right: 0; height: 60px;
+      background: #fff; display: flex; align-items: center; padding: 0 15px; gap: 1rem; z-index: 1000;
+      box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    #topPanel input, #topPanel select, #clearFilters {
+      height: 36px; font-size: 14px; padding: 0 0.5rem; border-radius: 4px; border: 1px solid #ccc; font-family: 'Roboto', sans-serif; font-weight: bold;
+      background: #f7f9fb;
+    }
+    
+    .search-container {
+      position: relative;
+      z-index: 100000 !important;
+      flex: 1;
+      min-width: 0;
+    }
+    
+    #searchInput {
+      width: 100%;
+      box-sizing: border-box;
+      order: 1;
+      padding-left: 35px;
+      background-image: url("https://raw.githubusercontent.com/JamesGalbraith516/CircleMap/main/assets/User-Group--Streamline-Sharp.png");
+      background-repeat: no-repeat;
+      background-position: 10px center;
+      background-size: 16px 16px;
+    }
+    
+    #locationInput {
+      width: 100%;
+      box-sizing: border-box;
+      order: 2;
+      padding-left: 35px;
+      background-image: url("https://raw.githubusercontent.com/JamesGalbraith516/CircleMap/main/assets/Home%20Services.png");
+      background-repeat: no-repeat;
+      background-position: 10px center;
+      background-size: 16px 16px;
+    }
+    
+    #countryFilter {
+      flex: 0 0 auto;
+      max-width: 150px;
+      order: 3;
+    }
+    #industryFilter {
+      flex: 0 0 auto;
+      max-width: 150px;
+      order: 4;
+    }
+    #clearFilters {
+      background-color: #1893cb; color: white; cursor: pointer;
+      flex: 0 0 auto;
+      order: 5;
+    }
+    #resultsPanel {
+      position: fixed; top: 60px; left: 0; width: 350px; bottom: 0;
+      overflow-y: auto; background: #f7f9fb; color: #013b5c; padding: 1rem; font-size: 0.9rem; z-index: 999; box-sizing: border-box;
+    }
+    #mapWrapper { 
+      position: absolute; top: 60px; left: 350px; right: 0; bottom: 0; 
+    }
+    #map { width: 100%; height: 100%; }
 
     /* Popover card styles */
     #popoverCard {
@@ -41,6 +103,7 @@
       min-width: 280px;
     }
 
+    /* Slight layout tweak so there's space for the button on the right while staying responsive */
     #popoverCard.show {
       display: flex;
       align-items: center;
@@ -93,14 +156,14 @@
       color: #333;
     }
 
-    /* New button style */
+    /* New button style (minimal & responsive). Using column layout so text stacks vertically. */
     .popover-button {
       background: #1893cb;
       color: #fff;
       border: none;
       border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 0.85rem;
+      padding: 8px 10px;
+      font-size: 0.9rem;
       font-weight: 600;
       cursor: pointer;
       flex-shrink: 0;
@@ -108,12 +171,117 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      line-height: 1.2;
-      transition: background 0.2s ease;
+      line-height: 1.05;
+      transition: background 0.15s ease;
+      text-align: center;
     }
 
     .popover-button:hover {
       background: #1479a8;
+    }
+
+    .user-card {
+      display: flex; align-items: center; padding: 0.5rem; margin-bottom: 0.5rem;
+      background: #fff; border-radius: 4px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .user-card:hover { background: rgba(0,150,205,0.15); }
+    .user-circle {
+      width: 60px; height: 60px; border-radius: 50%; background: #013b5c; border: 3px solid white;
+      color: white; font-weight: bold; font-size: 22px; display: flex; align-items: center; justify-content: center; margin-right: 0.5rem; flex-shrink: 0;
+    }
+    .user-info { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+    .user-name, .user-company, .user-industry, .user-location {
+      font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .user-name { font-weight: 500; font-size: 1rem;}
+    .user-company, .user-industry, .user-location { font-weight: normal; color: #666; }
+
+    .letter-marker, .custom-cluster {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-weight: bold;
+      font-size: 16px;
+      color: white;
+      border: 3px solid white;
+      background-color: #013b5c;
+    }
+
+    .custom-cluster {
+      background-color: #013b5c; color: white; border: 3px solid white; border-radius: 50%;
+      text-align: center; font-weight: bold; line-height: 40px; font-size: 16px;
+      transition: filter 0.2s;
+    }
+
+    /* Enhanced autocomplete styling */
+    .autocomplete-dropdown {
+      position: absolute; 
+      top: 100%; 
+      left: 0; 
+      right: 0;
+      background: #fff; 
+      border: 1px solid #ccc; 
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      z-index: 999999 !important;
+      max-height: 200px; 
+      overflow-y: auto; 
+      font-family: 'Roboto', sans-serif; 
+      font-weight: normal;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      display: none;
+    }
+    
+    .autocomplete-dropdown.show { 
+      display: block; 
+    }
+    
+    .autocomplete-item { 
+      padding: 10px 12px; 
+      cursor: pointer; 
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .autocomplete-item:last-child {
+      border-bottom: none;
+    }
+    
+    .autocomplete-item:hover { 
+      background: #f5f5f5; 
+    }
+    
+    .autocomplete-item-primary {
+      font-weight: 500;
+      color: #013b5c;
+      margin-bottom: 2px;
+    }
+    
+    .autocomplete-item-secondary {
+      font-size: 0.85em;
+      color: #666;
+    }
+
+    #resultsPanel h3 {
+      font-size: 1.5rem;
+      margin:0 0 10px 0;
+      color: #013b5c;
+    }
+
+    .leaflet-div-icon {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    
+    .leaflet-control {
+      z-index: 500 !important;
     }
 
     @media(max-width:768px){
@@ -152,7 +320,24 @@
 </head>
 <body>
 
-<!-- ... your topPanel and resultsPanel ... -->
+<div id="topPanel">
+  <div class="search-container">
+    <input type="text" id="searchInput" placeholder="Search by Name or Company">
+    <div id="nameAutocomplete" class="autocomplete-dropdown"></div>
+  </div>
+  <div class="search-container">
+    <input type="text" id="locationInput" placeholder="Search by Location">
+    <div id="locationAutocomplete" class="autocomplete-dropdown"></div>
+  </div>
+  <select id="countryFilter"><option value="">All Countries</option></select>
+  <select id="industryFilter"><option value="">All Industries</option></select>
+  <button id="clearFilters">Clear All Filters</button>
+</div>
+
+<div id="resultsPanel">
+  <h3>Users</h3>
+  <div id="nearbyList">Click a marker to see users.</div>
+</div>
 
 <div id="mapWrapper">
   <div id="map"></div>
@@ -165,21 +350,391 @@
       <div class="popover-industry" id="popoverIndustry"></div>
       <div class="popover-location" id="popoverLocation"></div>
     </div>
+    <!-- Added minimal View Profile button (stacked text) -->
     <button class="popover-button">View<br>Profile</button>
   </div>
 </div>
 
 <script>
-/* ... your existing JS ... */
+const map = L.map('map', { zoomControl:true }).setView([54,-98], 4.5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors' }).addTo(map);
 
-// Placeholder button action
-document.addEventListener('DOMContentLoaded', () => {
-  const profileButton = document.querySelector('.popover-button');
-  profileButton.addEventListener('click', (e) => {
-    e.stopPropagation(); // don’t close popover
-    console.log('View Profile clicked (placeholder)');
+const sheetURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vSm2djr9eOyF8SI92KcfrCsrFEcW3dmaStUT4H0Ard8A1BUKKgd08owmHvG6TT7AdfPXB26pJ-Stzjw/pub?gid=528897676&single=true&output=csv';
+let allData=[], markers=[], selectedMarker=null;
+
+const markerCluster = L.markerClusterGroup({
+  iconCreateFunction: cluster => L.divIcon({ html:`<div class="custom-cluster">${cluster.getChildCount()}</div>`, className:'', iconSize:L.point(40,40) }),
+  showCoverageOnHover: false
+});
+map.addLayer(markerCluster);
+
+const nameInput=document.getElementById('searchInput');
+const locationInput=document.getElementById('locationInput');
+const nameAuto=document.getElementById('nameAutocomplete');
+const locAuto=document.getElementById('locationAutocomplete');
+
+// Popover card elements
+const popoverCard = document.getElementById('popoverCard');
+const popoverAvatar = document.getElementById('popoverAvatar');
+const popoverName = document.getElementById('popoverName');
+const popoverCompany = document.getElementById('popoverCompany');
+const popoverIndustry = document.getElementById('popoverIndustry');
+const popoverLocation = document.getElementById('popoverLocation');
+
+// Show popover card
+function showPopover(userData) {
+  const firstLetter = userData['First Name'] ? userData['First Name'][0].toUpperCase() : '?';
+  const fullName = `${userData['First Name'] || ''} ${userData['Last Name'] || ''}`.trim();
+  const company = userData['Business Name'] || '';
+  const industry = userData['Industry'] || '';
+  const city = userData['City'] || '';
+  const state = userData['State/Province'] || '';
+  const location = [city, state].filter(Boolean).join(', ');
+
+  popoverAvatar.textContent = firstLetter;
+  popoverName.textContent = fullName;
+  popoverCompany.textContent = company;
+  popoverIndustry.textContent = industry;
+  popoverLocation.textContent = location;
+
+  popoverCard.classList.add('show');
+}
+
+// Hide popover card
+function hidePopover() {
+  popoverCard.classList.remove('show');
+}
+
+// Click outside popover to hide
+document.addEventListener('click', function(e) {
+  if (!popoverCard.contains(e.target) && !e.target.closest('.leaflet-marker-icon')) {
+    hidePopover();
+  }
+});
+
+// Prevent popover from closing when clicking inside it
+popoverCard.addEventListener('click', function(e) {
+  e.stopPropagation();
+});
+
+// Autocomplete functionality
+function setupAutocomplete() {
+  // Name/Company search autocomplete
+  nameInput.addEventListener('input', function() {
+    const query = this.value.trim().toLowerCase();
+    if (query.length < 2) {
+      hideAutocomplete(nameAuto);
+      return;
+    }
+    
+    const matches = allData.filter(user => {
+      const fullName = `${user['First Name'] || ''} ${user['Last Name'] || ''}`.toLowerCase();
+      const company = (user['Business Name'] || '').toLowerCase();
+      return fullName.includes(query) || company.includes(query);
+    }).slice(0, 8); // Limit to 8 results
+    
+    showAutocomplete(nameAuto, matches, query, 'name');
+  });
+  
+  // Location search autocomplete
+  locationInput.addEventListener('input', function() {
+    const query = this.value.trim().toLowerCase();
+    if (query.length < 2) {
+      hideAutocomplete(locAuto);
+      return;
+    }
+    
+    const matches = allData.filter(user => {
+      const city = (user['City'] || '').toLowerCase();
+      const state = (user['State/Province'] || '').toLowerCase();
+      const country = (user['Country'] || '').toLowerCase();
+      const fullLocation = `${city} ${state} ${country}`.toLowerCase();
+      return fullLocation.includes(query) || city.includes(query) || state.includes(query) || country.includes(query);
+    }).slice(0, 8); // Limit to 8 results
+    
+    showAutocomplete(locAuto, matches, query, 'location');
+  });
+  
+  // Hide dropdowns when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.search-container')) {
+      hideAutocomplete(nameAuto);
+      hideAutocomplete(locAuto);
+    }
+  });
+  
+  // Hide dropdowns on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      hideAutocomplete(nameAuto);
+      hideAutocomplete(locAuto);
+    }
+  });
+}
+
+function showAutocomplete(dropdown, matches, query, type) {
+  if (matches.length === 0) {
+    hideAutocomplete(dropdown);
+    return;
+  }
+  
+  dropdown.innerHTML = '';
+  
+  // Remove duplicates for location search
+  const uniqueMatches = type === 'location' ? removeDuplicateLocations(matches) : matches;
+  
+  uniqueMatches.forEach(user => {
+    const item = document.createElement('div');
+    item.className = 'autocomplete-item';
+    
+    if (type === 'name') {
+      const fullName = `${user['First Name'] || ''} ${user['Last Name'] || ''}`.trim();
+      const company = user['Business Name'] || '';
+      
+      item.innerHTML = `
+        <div class="autocomplete-item-primary">${highlightMatch(fullName, query)}</div>
+        <div class="autocomplete-item-secondary">${company ? highlightMatch(company, query) : ''}</div>
+      `;
+    } else {
+      const city = user['City'] || '';
+      const state = user['State/Province'] || '';
+      const country = user['Country'] || '';
+      const location = [city, state, country].filter(Boolean).join(', ');
+      
+      item.innerHTML = `
+        <div class="autocomplete-item-primary">${highlightMatch(location, query)}</div>
+        <div class="autocomplete-item-secondary">${user['First Name']} ${user['Last Name']}</div>
+      `;
+    }
+    
+    item.addEventListener('click', () => {
+      selectAutocompleteItem(user, type);
+      hideAutocomplete(dropdown);
+    });
+    
+    dropdown.appendChild(item);
+  });
+  
+  dropdown.classList.add('show');
+}
+
+function hideAutocomplete(dropdown) {
+  dropdown.classList.remove('show');
+  dropdown.innerHTML = '';
+}
+
+function highlightMatch(text, query) {
+  if (!query || !text) return text;
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  return text.replace(regex, '<strong>$1</strong>');
+}
+
+function removeDuplicateLocations(matches) {
+  const seen = new Set();
+  return matches.filter(user => {
+    const city = user['City'] || '';
+    const state = user['State/Province'] || '';
+    const country = user['Country'] || '';
+    const locationKey = `${city}-${state}-${country}`.toLowerCase();
+    
+    if (seen.has(locationKey)) {
+      return false;
+    }
+    seen.add(locationKey);
+    return true;
+  });
+}
+
+function selectAutocompleteItem(user, type) {
+  // Find the marker for this user
+  const userMarker = markers.find(marker => {
+    const markerData = marker.data;
+    return markerData['First Name'] === user['First Name'] && 
+           markerData['Last Name'] === user['Last Name'] && 
+           markerData['Business Name'] === user['Business Name'];
+  });
+  
+  if (userMarker && user['Geocode']) {
+    const [lat, lng] = user['Geocode'].split(',').map(Number);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      // Zoom to the marker location
+      map.setView([lat, lng], 12);
+      
+      // Briefly highlight the marker
+      highlightSelectedMarker(userMarker);
+      
+      // Update the search input with the selected value
+      if (type === 'name') {
+        nameInput.value = `${user['First Name']} ${user['Last Name']}`;
+      } else {
+        const city = user['City'] || '';
+        const state = user['State/Province'] || '';
+        const country = user['Country'] || '';
+        locationInput.value = [city, state, country].filter(Boolean).join(', ');
+      }
+    }
+  }
+}
+
+function highlightSelectedMarker(marker) {
+  // Store original style
+  const element = marker.getElement();
+  if (element) {
+    const originalFilter = element.style.filter;
+    
+    // Add highlight
+    element.style.filter = 'drop-shadow(0 0 10px #ff6b35)';
+    element.style.transform = 'scale(1.2)';
+    element.style.zIndex = '1000';
+    
+    // Remove highlight after 2 seconds
+    setTimeout(() => {
+      element.style.filter = originalFilter;
+      element.style.transform = '';
+      element.style.zIndex = '';
+    }, 2000);
+  }
+}
+
+fetch(sheetURL).then(r=>r.text()).then(csv=>{
+  const parsed=Papa.parse(csv,{header:true, skipEmptyLines:true});
+  allData=parsed.data;
+
+  const industrySet=new Set(), countrySet=new Set();
+  allData.forEach(r=>{if(r['Industry'])industrySet.add(r['Industry']);if(r['Country'])countrySet.add(r['Country']);});
+
+  const industrySelect=document.getElementById('industryFilter');
+  Array.from(industrySet).sort().forEach(ind=>{const o=document.createElement('option');o.value=ind;o.textContent=ind;industrySelect.appendChild(o);});
+  const countrySelect=document.getElementById('countryFilter');
+  Array.from(countrySet).sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;countrySelect.appendChild(o);});
+
+  // Setup autocomplete after data is loaded
+  setupAutocomplete();
+
+  updateMap();
+  industrySelect.addEventListener('change',updateMap);
+  countrySelect.addEventListener('change',updateMap);
+  document.getElementById('clearFilters').addEventListener('click',()=>{
+    nameInput.value=''; locationInput.value=''; industrySelect.value=''; countrySelect.value=''; 
+    hideAutocomplete(nameAuto); hideAutocomplete(locAuto);
+    updateMap();
   });
 });
+
+function createLetterMarker(user){
+  const firstLetter = user['First Name'] ? user['First Name'][0].toUpperCase() : '?';
+  return L.divIcon({ html:`<div class="letter-marker">${firstLetter}</div>`, iconSize:[40,40], iconAnchor:[20,20] });
+}
+
+function updateMap(){
+  markerCluster.clearLayers(); markers=[]; selectedMarker=null;
+  const countryF=document.getElementById('countryFilter').value.toLowerCase();
+  const industryF=document.getElementById('industryFilter').value.toLowerCase();
+
+  allData.forEach(row=>{
+    if(countryF && row['Country']?.toLowerCase()!==countryF) return;
+    if(industryF && row['Industry']?.toLowerCase()!==industryF) return;
+    if(!row['Geocode']||!row['Geocode'].includes(',')) return;
+    let [lat,lng]=row['Geocode'].split(',').map(Number);
+    lat=Math.round(lat*100)/100;
+    lng=Math.round(lng*100)/100;
+
+    if(isNaN(lat)||isNaN(lng)) return;
+
+    const marker=L.marker([lat,lng],{icon:createLetterMarker(row)});
+    marker.data=row;
+
+    marker.on('mouseover',()=>highlightCard(marker,true));
+    marker.on('mouseout',()=>highlightCard(marker,false));
+    
+    // Add click event to show popover
+    marker.on('click', (e) => {
+      e.originalEvent.stopPropagation();
+      showPopover(marker.data);
+    });
+
+    markers.push(marker);
+    markerCluster.addLayer(marker);
+  });
+
+  updateVisibleUsers();
+}
+
+function getMarkerId(marker){
+  const d=marker.data;
+  return `${d['First Name']}_${d['Last Name']}_${d['Business Name']||''}`.replace(/\s+/g,'_');
+}
+
+function highlightCard(marker,hover){
+  const card=document.querySelector(`[data-marker-id="${getMarkerId(marker)}"]`);
+  if(card) card.style.backgroundColor = hover ? 'rgba(0,150,205,0.15)' : 'transparent';
+
+  const parent = markerCluster.getVisibleParent(marker);
+  if(parent && parent !== marker){
+    const clusterEl = parent._icon;
+    if(clusterEl) clusterEl.style.filter = hover ? 'drop-shadow(0 0 6px #1893cb)' : '';
+  }else{
+    const el=marker.getElement && marker.getElement();
+    if(el) el.style.filter = hover ? 'drop-shadow(0 0 6px #1893cb)' : '';
+  }
+}
+
+function updateVisibleUsers(){
+  const bounds=map.getBounds();
+  const listDiv=document.getElementById('nearbyList'); listDiv.innerHTML='';
+  const visible=markers.filter(m=>bounds.contains(m.getLatLng()));
+  if(!visible.length){ listDiv.textContent='No users visible on map.'; return; }
+
+  visible.forEach(marker=>{
+    const div=document.createElement('div'); div.className='user-card'; div.dataset.markerId=getMarkerId(marker);
+    div.innerHTML=`<div class="user-circle">${marker.data['First Name']?.[0].toUpperCase()||'?'}</div>
+      <div class="user-info">
+        <div class="user-name" title="${marker.data['First Name']} ${marker.data['Last Name']}">${marker.data['First Name']} ${marker.data['Last Name']}</div>
+        <div class="user-company" title="${marker.data['Business Name']||''}">${marker.data['Business Name']||''}</div>
+        <div class="user-industry" title="${marker.data['Industry']||''}">${marker.data['Industry']||''}</div>
+        <div class="user-location" title="${marker.data['City']||''}, ${marker.data['State/Province']||''}">${marker.data['City']||''}, ${marker.data['State/Province']||''}</div>
+      </div>`;
+
+    div.addEventListener('mouseenter',()=>highlightCard(marker,true));
+    div.addEventListener('mouseleave',()=>highlightCard(marker,false));
+    listDiv.appendChild(div);
+  });
+}
+
+map.on('moveend', updateVisibleUsers);
+map.on('zoomend', updateVisibleUsers);
+
+markerCluster.on('clustermouseover', e=>{
+  const cluster = e.layer;
+  const icon = cluster._icon;
+  if(icon) icon.style.filter = 'drop-shadow(0 0 6px #1893cb)';
+  const children = cluster.getAllChildMarkers();
+  children.forEach(m=>{
+    const card=document.querySelector(`[data-marker-id="${getMarkerId(m)}"]`);
+    if(card) card.style.backgroundColor = 'rgba(0,150,205,0.15)';
+  });
+});
+
+markerCluster.on('clustermouseout', e=>{
+  const cluster = e.layer;
+  const icon = cluster._icon;
+  if(icon) icon.style.filter = '';
+  const children = cluster.getAllChildMarkers();
+  children.forEach(m=>{
+    const card=document.querySelector(`[data-marker-id="${getMarkerId(m)}"]`);
+    if(card) card.style.backgroundColor = 'transparent';
+  });
+});
+
+// Minimal placeholder action for the View Profile button
+const profileButton = document.querySelector('.popover-button');
+if (profileButton) {
+  profileButton.addEventListener('click', (e) => {
+    e.stopPropagation(); // keep popover open
+    console.log('View Profile clicked (placeholder)');
+    // future: navigate to profile URL or open modal
+  });
+}
 </script>
 </body>
 </html>
