@@ -1,3 +1,4 @@
+@ -1,701 +1,703 @@
 <!DOCTYPE html>
 <html>
 <head>
@@ -103,12 +104,10 @@
       min-width: 280px;
     }
 
-    /* Slight layout tweak so there's space for the button on the right while staying responsive */
     #popoverCard.show {
       display: flex;
       align-items: center;
       gap: 12px;
-      justify-content: space-between;
     }
 
     .popover-avatar {
@@ -154,30 +153,6 @@
     .popover-company {
       font-weight: 500;
       color: #333;
-    }
-
-    /* New button style (minimal & responsive). Using column layout so text stacks vertically. */
-    .popover-button {
-      background: #1893cb;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 10px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      line-height: 1.05;
-      transition: background 0.15s ease;
-      text-align: center;
-    }
-
-    .popover-button:hover {
-      background: #1479a8;
     }
 
     .user-card {
@@ -228,6 +203,7 @@
       border: 1px solid #ccc; 
       border-top: none;
       border-radius: 0 0 4px 4px;
+      z-index: 99999; 
       z-index: 999999 !important;
       max-height: 200px; 
       overflow-y: auto; 
@@ -350,8 +326,6 @@
       <div class="popover-industry" id="popoverIndustry"></div>
       <div class="popover-location" id="popoverLocation"></div>
     </div>
-    <!-- Added minimal View Profile button (stacked text) -->
-    <button class="popover-button">View<br>Profile</button>
   </div>
 </div>
 
@@ -725,16 +699,6 @@ markerCluster.on('clustermouseout', e=>{
     if(card) card.style.backgroundColor = 'transparent';
   });
 });
-
-// Minimal placeholder action for the View Profile button
-const profileButton = document.querySelector('.popover-button');
-if (profileButton) {
-  profileButton.addEventListener('click', (e) => {
-    e.stopPropagation(); // keep popover open
-    console.log('View Profile clicked (placeholder)');
-    // future: navigate to profile URL or open modal
-  });
-}
 </script>
 </body>
 </html>
