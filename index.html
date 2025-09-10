@@ -742,4 +742,35 @@ function updateVisibleUsers(){
       </div>`;
 
     div.addEventListener('mouseenter',()=>highlightCard(marker,true));
-    div.addEventListener('mouseleave',()=>highlightCard(
+    div.addEventListener('mouseleave',()=>highlightCard(marker,false));
+    listDiv.appendChild(div);
+  });
+}
+
+map.on('moveend', updateVisibleUsers);
+map.on('zoomend', updateVisibleUsers);
+
+markerCluster.on('clustermouseover', e=>{
+  const cluster = e.layer;
+  const icon = cluster._icon;
+  if(icon) icon.style.filter = 'drop-shadow(0 0 6px #1893cb)';
+  const children = cluster.getAllChildMarkers();
+  children.forEach(m=>{
+    const card=document.querySelector(`[data-marker-id="${getMarkerId(m)}"]`);
+    if(card) card.style.backgroundColor = 'rgba(0,150,205,0.15)';
+  });
+});
+
+markerCluster.on('clustermouseout', e=>{
+  const cluster = e.layer;
+  const icon = cluster._icon;
+  if(icon) icon.style.filter = '';
+  const children = cluster.getAllChildMarkers();
+  children.forEach(m=>{
+    const card=document.querySelector(`[data-marker-id="${getMarkerId(m)}"]`);
+    if(card) card.style.backgroundColor = 'transparent';
+  });
+});
+</script>
+</body>
+</html>
